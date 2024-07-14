@@ -1,4 +1,6 @@
 // client/pages/demo/decrypt-image/index.tsx
+// src/app/DecryptImage/page.tsx
+"use client"; // Add this at the top
 import Image from "next/image";
 import React, { useState } from "react";
 import Swal from 'sweetalert2';
