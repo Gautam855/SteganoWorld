@@ -1,10 +1,6 @@
 
 "use client";
-import React, { useState, useEffect } from "react";
-import { TextGenerateEffect } from "../../components/ui/text-generate-effect";
-import { WavyBackground } from "../../components/ui/wavy-background";
-import { cn } from "../../utils/cn";
-import {NavbarDemo} from "../app/nav";
+
 
 const words = `Steganography is the art and science of hiding information within other seemingly innocuous data. Unlike cryptography, which focuses on making data unreadable to unauthorized users, steganography aims to conceal the very existence of the data. This subtle approach can be particularly effective in today's digital world, where information security is paramount.
 `;
