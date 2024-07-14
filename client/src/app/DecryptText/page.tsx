@@ -63,7 +63,7 @@ function DecryptText() {
     const formData = new FormData();
     formData.append("image", dataURLtoFile(selectedImage, "image.png"));
     formData.append("password", password);
-    const response = await fetch("/api/decrypt_text", { // Updated API endpoint
+    const response = await fetch("", { // Updated API endpoint
       method: "POST",
       body: formData,
     });
