@@ -1,4 +1,5 @@
 // client/pages/demo/decrypt-text/index.tsx
+"use client";
 import Image from "next/image";
 import React, { useState, useEffect } from "react";
 import { CardBody, CardContainer, CardItem } from "../../../components/ui/3d-card";
