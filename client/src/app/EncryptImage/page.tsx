@@ -1,4 +1,5 @@
 // client/pages/demo/encrypt-image/index.tsx
+"use client";
 import Image from "next/image";
 import React, { useState } from "react";
 import { CardBody, CardContainer, CardItem } from "../../../components/ui/3d-card";
