@@ -64,7 +64,7 @@ function DecryptText() {
     const formData = new FormData();
     formData.append("image", dataURLtoFile(selectedImage, "image.png"));
     formData.append("password", password);
-    const response = await fetch("", { // Updated API endpoint
+    const response = await fetch("https://steganoworld-backend.onrender.com/api/decrypt_text", { // Updated API endpoint
       method: "POST",
       body: formData,
     });

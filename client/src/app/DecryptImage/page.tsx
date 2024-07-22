@@ -56,7 +56,7 @@ function DecryptImage() {
       const formData = new FormData();
       formData.append("image", dataURLtoFile(selectedImage!, "image.png"));
       formData.append("password", password);
-      const response = await fetch("http://127.0.0.1:5000/api/decrypt_Image", {
+      const response = await fetch("https://steganoworld-backend.onrender.com/api/decrypt_image", {
         // Updated API endpoint
         method: "POST",
         body: formData,

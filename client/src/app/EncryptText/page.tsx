@@ -52,7 +52,7 @@ const EncryptText = () => {
     formData.append("password", password);
 
     try {
-      const response = await fetch("/api/encrypt_text", {
+      const response = await fetch("https://steganoworld-backend.onrender.com/api/encrypt_text", {
         method: "POST",
         body: formData,
       });

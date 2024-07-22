@@ -87,7 +87,7 @@ function EncryptImage() {
       }
     });
     formData.append('password', password);
-    const process_request = await fetch("/api/encrypt_images", { // Updated API endpoint
+    const process_request = await fetch("https://steganoworld-backend.onrender.com/api/encrypt_images", { // Updated API endpoint
       method: "POST",
       body: formData,
     });
