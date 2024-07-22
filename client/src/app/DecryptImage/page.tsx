@@ -3,12 +3,16 @@
 "use client"; // Add this at the top
 import Image from "next/image";
 import React, { useState } from "react";
-import Swal from 'sweetalert2';
-import '@sweetalert2/theme-dark/dark.scss';
+import Swal from "sweetalert2";
+import "@sweetalert2/theme-dark/dark.scss";
 import { cn } from "../../../utils/cn";
-import { BackgroundBeams} from "../../../components/ui/background-beams";
-import { NavbarDemo} from "../nav";
-import { CardBody, CardContainer, CardItem } from "../../../components/ui/3d-card";
+import { BackgroundBeams } from "../../../components/ui/background-beams";
+import { NavbarDemo } from "../nav";
+import {
+  CardBody,
+  CardContainer,
+  CardItem,
+} from "../../../components/ui/3d-card";
 
 function DecryptImage() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -35,16 +39,16 @@ function DecryptImage() {
         inputAttributes: {
           maxlength: "10",
           autocapitalize: "off",
-          autocorrect: "off"
-        }
+          autocorrect: "off",
+        },
       });
-      
+
       if (!password) {
         Swal.fire({
-          title: 'Error!',
-          text: 'Password is required',
-          icon: 'error',
-          confirmButtonText: 'Cool'
+          title: "Error!",
+          text: "Password is required",
+          icon: "error",
+          confirmButtonText: "Cool",
         });
         return;
       }
@@ -52,7 +56,8 @@ function DecryptImage() {
       const formData = new FormData();
       formData.append("image", dataURLtoFile(selectedImage!, "image.png"));
       formData.append("password", password);
-      const response = await fetch("/api/decrypt_Image", { // Updated API endpoint
+      const response = await fetch("http://127.0.0.1:5000/api/decrypt_Image", {
+        // Updated API endpoint
         method: "POST",
         body: formData,
       });
@@ -62,31 +67,31 @@ function DecryptImage() {
         setDecryptedImage(URL.createObjectURL(decryptedImageUrl));
 
         Swal.fire({
-          title: 'Decrypted',
-          text: 'Successfully Decrypt the Image',
-          icon: 'success',
-          confirmButtonText: 'Cool'
-        })
+          title: "Decrypted",
+          text: "Successfully Decrypt the Image",
+          icon: "success",
+          confirmButtonText: "Cool",
+        });
       } else {
-        throw new Error('Failed to decrypt image');
+        throw new Error("Failed to decrypt image");
       }
     } catch (error) {
       Swal.fire({
-        title: 'Error',
+        title: "Error",
         text: `Failed to Decrypt the Image ${error}`,
-        icon: 'error',
-      })
+        icon: "error",
+      });
     }
   };
 
   const handleDownloadImage = () => {
     if (decryptedImage === null) {
       Swal.fire({
-        title: 'Error!',
-        text: 'First decrypt the Image',
-        icon: 'error',
-        confirmButtonText: 'Cool'
-      })
+        title: "Error!",
+        text: "First decrypt the Image",
+        icon: "error",
+        confirmButtonText: "Cool",
+      });
       return;
     }
 
@@ -112,17 +117,22 @@ function DecryptImage() {
 
   return (
     <div className="overflow-hidden pb-10">
-      <NavbarDemo/>
-      <div className="text-center mt-32 text-6xl text-sky-400">Decrypt Image</div>
+      <NavbarDemo />
+      <div className="text-center mt-32 text-6xl text-sky-400">
+        Decrypt Image
+      </div>
       <div className="flex flex-row items-center justify-around">
         <ThreeDCardDemo
           selectedImage={selectedImage}
           handleImageChange={handleImageChange}
           handleShowImage={handleShowImage}
         />
-        <ThreeDCardDemo2 decryptedImage={decryptedImage} handleDownloadImage={handleDownloadImage} />
+        <ThreeDCardDemo2
+          decryptedImage={decryptedImage}
+          handleDownloadImage={handleDownloadImage}
+        />
       </div>
-      <BackgroundBeams/>
+      <BackgroundBeams />
     </div>
   );
 }
@@ -141,15 +151,13 @@ function ThreeDCardDemo({
       <CardBody className="bg-gray-50 relative group/card dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[30rem] h-auto rounded-xl p-6 border dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1]">
         <CardItem
           translateZ="50"
-          className="text-xl font-bold text-neutral-600 dark:text-white"
-        >
+          className="text-xl font-bold text-neutral-600 dark:text-white">
           Select Image
         </CardItem>
         <CardItem
           as="p"
           translateZ="60"
-          className="text-neutral-500 text-sm max-w-sm mt-2 dark:text-neutral-300"
-        >
+          className="text-neutral-500 text-sm max-w-sm mt-2 dark:text-neutral-300">
           Please select the image for Decryption
         </CardItem>
         <CardItem translateZ="100" className="w-full mt-4">
@@ -170,15 +178,14 @@ function ThreeDCardDemo({
         <div className="flex justify-between items-center mt-20">
           <label
             htmlFor="imageUpload"
-            className="cursor-pointer relative inline-flex h-12 overflow-hidden rounded-full p-[1px]"
-          >
+            className="cursor-pointer relative inline-flex h-12 overflow-hidden rounded-full p-[1px]">
             <input
               type="file"
               id="imageUpload"
               className="cursor-pointer absolute inset-0 opacity-0"
               onChange={handleImageChange}
             />
-            <span  className="cursor-pointer absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)]" />
+            <span className="cursor-pointer absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)]" />
             <span className="cursor-pointer inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white backdrop-blur-3xl">
               Browse Image
             </span>
@@ -195,7 +202,6 @@ function ThreeDCardDemo({
         </div>
       </CardBody>
     </CardContainer>
-  
   );
 }
 
@@ -211,8 +217,7 @@ function ThreeDCardDemo2({
       <CardBody className="bg-gray-50 relative group/card dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[30rem] h-auto rounded-xl p-6 border dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1]">
         <CardItem
           translateZ="50"
-          className="text-xl font-bold text-neutral-600 dark:text-white"
-        >
+          className="text-xl font-bold text-neutral-600 dark:text-white">
           Decrypted Image
         </CardItem>
         <CardItem translateZ="100" className="w-full mt-4">
@@ -233,8 +238,7 @@ function ThreeDCardDemo2({
         <div className="flex justify-center items-center mt-20">
           <label
             htmlFor="imageDownload"
-            className="cursor-pointer relative inline-flex h-12 overflow-hidden rounded-full p-[1px]"
-          >
+            className="cursor-pointer relative inline-flex h-12 overflow-hidden rounded-full p-[1px]">
             <input
               type="file"
               id="imageDownload"

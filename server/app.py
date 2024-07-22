@@ -1,5 +1,4 @@
-# serverless.py
-from flask_like import Flask, request, send_file, jsonify
+from flask import Flask, request, send_file, jsonify
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
@@ -10,7 +9,7 @@ from PIL import Image
 from vigenre import encrypt_vigenere, decrypt_vigenere
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for all routes
+CORS(app)  
 
 UPLOAD_FOLDER = 'static/uploads'
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
