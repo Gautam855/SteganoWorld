@@ -8,6 +8,7 @@ import { Textarea } from "../../../components/ui/input";
 import { NavbarDemo } from "../nav";
 import Swal from 'sweetalert2';
 import { cn } from "../../../utils/cn";
+import { Label } from "../../../components/ui/label";
 
 const EncryptText = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -136,24 +137,29 @@ const SignupFormDemo = ({ setTextData, handleHideClick }: SignupFormDemoProps) =
   return (
     <CardContainer className="inter-var">
       <CardBody className="bg-gray-50 relative group/card dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[30rem] h-auto rounded-xl p-6 border dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1]">
-        <form className="flex flex-col items-center justify-around" onSubmit={handleSubmit}>
-          <div className="text-xl font-bold text-neutral-600 dark:text-white mb-8">
-            Your Message
-          </div>
+        <form className="flex flex-col  justify-around" onSubmit={handleSubmit}>
+        <CardItem translateZ="60" className="text-neutral-500 text-sm max-w-sm mt-2 dark:text-neutral-300">
+        <Label htmlFor="decryptedMessage">
+              <CardItem translateZ="50" className="text-xl font-bold text-neutral-600 dark:text-white">
+                Your Message
+              </CardItem>
+            </Label>
           <Textarea
             id="message"
             placeholder="Please Enter Your Secret Message here"
             onChange={(e) => setTextData(e.target.value)}
           />
-          <button type="submit" className="relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50">
+          </CardItem>
+        </form>
+        <button type="submit" className="mt-4 relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50">
             <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)]" />
             <span className="inline-flex h-full w-full cursor-pointer items-center justify-center rounded-full bg-slate-950 px-3 py-1 text-sm font-medium text-white backdrop-blur-3xl">
               Hide Data
             </span>
           </button>
-        </form>
       </CardBody>
     </CardContainer>
+    
   );
 };
 
@@ -166,25 +172,19 @@ const ThreeDCardDemo = ({ handleImageChange, selectedImage }: ThreeDCardDemoProp
   return (
     <CardContainer className="inter-var">
       <CardBody className="bg-gray-50 relative group/card dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[30rem] h-auto rounded-xl p-6 border dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1]">
-        <div className="text-xl font-bold text-neutral-600 dark:text-white">
+      <CardItem translateZ="50" className="text-xl font-bold text-neutral-600 dark:text-white">
           Select Image
-        </div>
-        <div className="text-neutral-500 text-sm max-w-sm mt-2 dark:text-neutral-300">
+        </CardItem>
+        <CardItem translateZ="60" className="text-neutral-500 text-sm max-w-sm mt-2 dark:text-neutral-300">
           Please select the image for Decryption
-        </div>
-        <div className="w-full mt-4">
+        </CardItem>
+        <CardItem translateZ="100" className="w-full mt-4">
           {selectedImage ? (
-            <Image
-              src={selectedImage}
-              height="800"
-              width="1000"
-              className="h-full mt-8 mb-8 w-full object-cover rounded-xl group-hover/card:shadow-xl"
-              alt="thumbnail"
-            />
+            <Image src={selectedImage} height="800" width="1000" className="h-full mt-8 mb-8 w-full object-cover rounded-xl group-hover/card:shadow-xl" alt="thumbnail" />
           ) : (
             <div className="h-60 w-full flex items-center justify-center text-gray-400">No image selected</div>
           )}
-        </div>
+        </CardItem>
         <div className="flex justify-between items-center mt-20">
           <div className="px-4 py-2 rounded-xl text-xs font-normal dark:text-white">
             Try now →
