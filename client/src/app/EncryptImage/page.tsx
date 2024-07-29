@@ -4,9 +4,6 @@ import Image from "next/image";
 import React, { useState } from "react";
 import { CardBody, CardContainer, CardItem } from "../../../components/ui/3d-card";
 import { BackgroundBeams } from "../../../components/ui/background-beams";
-import { Label } from "../../../components/ui/label";
-import { Textarea } from "../../../components/ui/input";
-import { cn } from "../../../utils/cn";
 import { NavbarDemo } from "../nav";
 import Swal from 'sweetalert2';
 
@@ -135,7 +132,7 @@ function EncryptImage() {
     <div>
       <NavbarDemo />
       <div className="text-center mt-32 text-6xl text-sky-400">Encrypt Image</div>
-      <div className="flex flex-row items-center justify-around">
+      <div className="flex flex-row flex-wrap items-center justify-around">
         <ThreeDCardDemo index={0} selectedImage={selectedImages[0]} handleImageChange={handleImageChange(0)} imageInfo={imageInfo[0]} />
         <ThreeDCardDemo index={1} selectedImage={selectedImages[1]} handleImageChange={handleImageChange(1)} handleHideClick={handleHideClick} imageInfo={imageInfo[1]} />
       </div>

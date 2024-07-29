@@ -112,7 +112,7 @@ function DecryptText() {
     <div className="overflow-hidden pb-40">
       <NavbarDemo />
       <div className="text-center mt-32 text-6xl text-sky-400">Decrypt Text</div>
-      <div className="flex flex-row items-center justify-around">
+      <div className="flex flex-row flex-wrap items-center justify-around">
         <ThreeDCardDemo selectedImage={selectedImage} handleImageChange={handleImageChange} />
         <SignupFormDemo decryptedText={decryptedText} handleDecryptClick={handleDecryptClick} handleDownloadTxt={handleDownloadTxt} />
       </div>

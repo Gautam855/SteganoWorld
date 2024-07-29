@@ -114,7 +114,7 @@ const EncryptText = () => {
     <div className="mb-40 overflow-hidden">
       <NavbarDemo />
       <div className="text-center mt-32 text-6xl text-sky-400">Encrypt Text</div>
-      <div className="flex flex-row items-center justify-around">
+      <div className="flex flex-row flex-wrap items-center justify-around">
         <ThreeDCardDemo handleImageChange={handleImageChange} selectedImage={selectedImage} />
         <SignupFormDemo setTextData={setTextData} handleHideClick={handleHideClick} />
       </div>

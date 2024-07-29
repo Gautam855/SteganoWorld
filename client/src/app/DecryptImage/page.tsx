@@ -5,7 +5,6 @@ import Image from "next/image";
 import React, { useState } from "react";
 import Swal from "sweetalert2";
 import "@sweetalert2/theme-dark/dark.scss";
-import { cn } from "../../../utils/cn";
 import { BackgroundBeams } from "../../../components/ui/background-beams";
 import { NavbarDemo } from "../nav";
 import {
@@ -121,7 +120,7 @@ function DecryptImage() {
       <div className="text-center mt-32 text-6xl text-sky-400">
         Decrypt Image
       </div>
-      <div className="flex flex-row items-center justify-around">
+      <div className="flex flex-row flex-wrap items-center justify-around">
         <ThreeDCardDemo
           selectedImage={selectedImage}
           handleImageChange={handleImageChange}
@@ -175,7 +174,7 @@ function ThreeDCardDemo({
             </div>
           )}
         </CardItem>
-        <div className="flex justify-between items-center mt-20">
+        <div className="cursor-pointer flex justify-between items-center mt-20">
           <label
             htmlFor="imageUpload"
             className="cursor-pointer relative inline-flex h-12 overflow-hidden rounded-full p-[1px]">
@@ -191,7 +190,7 @@ function ThreeDCardDemo({
             </span>
           </label>
           <button
-            className="relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50"
+            className="cursor-pointer relative inline-flex h-12 overflow-hidden rounded-full p-[1px] focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-50"
             onClick={handleShowImage} // Add onClick event handler
           >
             <span className="absolute inset-[-1000%] animate-[spin_2s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,#E2CBFF_0%,#393BB2_50%,#E2CBFF_100%)]" />
@@ -235,7 +234,7 @@ function ThreeDCardDemo2({
             </div>
           )}
         </CardItem>
-        <div className="flex justify-center items-center mt-20">
+        <div className="cursor-pointer flex justify-center items-center mt-20">
           <label
             htmlFor="imageDownload"
             className="cursor-pointer relative inline-flex h-12 overflow-hidden rounded-full p-[1px]">
