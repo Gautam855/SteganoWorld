@@ -7,7 +7,6 @@ import { BackgroundBeams } from "../../../components/ui/background-beams";
 import { Textarea } from "../../../components/ui/input";
 import { NavbarDemo } from "../nav";
 import Swal from 'sweetalert2';
-import { cn } from "../../../utils/cn";
 import { Label } from "../../../components/ui/label";
 
 const EncryptText = () => {
@@ -112,7 +111,7 @@ const EncryptText = () => {
 
   return (
     <div className="mb-40 overflow-hidden">
-      <NavbarDemo />
+      <NavbarDemo/>
       <div className="text-center mt-32 text-6xl text-sky-400">Encrypt Text</div>
       <div className="flex flex-row flex-wrap items-center justify-around">
         <ThreeDCardDemo handleImageChange={handleImageChange} selectedImage={selectedImage} />
