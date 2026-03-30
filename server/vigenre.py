@@ -1,44 +1,39 @@
-def generate_vigenere_table():
-    table = []
-    for i in range(26):
-        row = [(chr((i + j) % 26 + 65)) for j in range(26)]
-        table.append(row)
-    return table
+import numpy as np
 
-def extend_key(message, key):
-    key = key.upper()
-    return (key * (len(message) // len(key)) + key[:len(message) % len(key)]).upper()
-
-def encrypt_vigenere(message, key):
-    table = generate_vigenere_table()
-    message = message.upper()
-    key = extend_key(message, key)
+def encrypt_binary(data_str, key):
+    """Secure XOR-based encryption that works for ANY data (including Base64)"""
+    if not key: key = "STEGANO"
     
-    encrypted_message = []
-    for i, letter in enumerate(message):
-        if letter.isalpha():
-            row = ord(key[i]) - 65
-            col = ord(letter) - 65
-            encrypted_message.append(table[row][col])
-        else:
-            encrypted_message.append(letter)  # Non-alphabet characters are not encrypted
-
-    return ''.join(encrypted_message)
-
-def decrypt_vigenere(encrypted_message, key):
-    table = generate_vigenere_table()
-    encrypted_message = encrypted_message.upper()
-    key = extend_key(encrypted_message, key)
+    # Convert everything to bytes
+    data_bytes = np.frombuffer(data_str.encode('utf-8'), dtype=np.uint8).copy()
+    key_bytes = np.frombuffer(key.encode('utf-8'), dtype=np.uint8)
     
-    decrypted_message = []
-    for i, letter in enumerate(encrypted_message):
-        if letter.isalpha():
-            row = ord(key[i]) - 65
-            col = table[row].index(letter)
-            decrypted_message.append(chr(col + 65))
-        else:
-            decrypted_message.append(letter)  # Non-alphabet characters are not decrypted
+    # Vectorized XOR operation
+    key_len = len(key_bytes)
+    key_cycle = np.tile(key_bytes, (len(data_bytes) // key_len) + 1)[:len(data_bytes)]
+    
+    # XOR each byte with the key (Preserves all cases and symbols!)
+    encrypted_bytes = np.bitwise_xor(data_bytes, key_cycle)
+    
+    # Return as safe latin-1 string (to avoid UTF-8 errors)
+    return encrypted_bytes.tobytes().decode('latin-1')
 
-    return ''.join(decrypted_message)
+def decrypt_binary(encrypted_str, key):
+    """The beauty of XOR is that decryption is exactly the same as encryption!"""
+    if not key: key = "STEGANO"
+    
+    data_bytes = np.frombuffer(encrypted_str.encode('latin-1'), dtype=np.uint8).copy()
+    key_bytes = np.frombuffer(key.encode('utf-8'), dtype=np.uint8)
+    
+    key_len = len(key_bytes)
+    key_cycle = np.tile(key_bytes, (len(data_bytes) // key_len) + 1)[:len(data_bytes)]
+    
+    decrypted_bytes = np.bitwise_xor(data_bytes, key_cycle)
+    return decrypted_bytes.tobytes().decode('utf-8', errors='ignore')
 
+# Legacy aliases for text-only compatibility (using the new fast XOR logic)
+def encrypt_vigenere(text, key):
+    return encrypt_binary(text, key)
 
+def decrypt_vigenere(text, key):
+    return decrypt_binary(text, key)
