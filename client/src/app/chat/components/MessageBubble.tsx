@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { decryptMessage } from '../crypto';
 import { downloadStegoImage } from '../api';
+import { getKeys } from '../keyStore';
 import { getCachedImageUrl, setCachedImageUrl } from '../cache';
 import { motion } from 'framer-motion';
 import { RotateCcw, Eye, ChevronRight, Download, X, Lock, Loader2 } from 'lucide-react';
@@ -108,26 +109,17 @@ export default function MessageBubble({ message, currentUserId, privateKey, onRe
 
   // Load image thumbnail (with cache)
   useEffect(() => {
-    if (!imageId || imageUrl || imageLoading) return;
+    if (!imageId || imageUrl) return;
 
-    // Check memory cache first (instant!)
-    const cached = getCachedImageUrl(imageId);
-    if (cached) {
-      setImageUrl(cached);
-      return;
-    }
+    const loadUrl = async () => {
+      const keys = await getKeys();
+      const token = keys?.token || '';
+      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+      setImageUrl(`${baseUrl}/api/chat/stego/download/${imageId}?token=${token}`);
+    };
 
-    // Download and cache
-    setImageLoading(true);
-    downloadStegoImage(imageId)
-      .then((blob) => {
-        const url = URL.createObjectURL(blob);
-        setCachedImageUrl(imageId, url);
-        setImageUrl(url);
-      })
-      .catch(() => {})
-      .finally(() => setImageLoading(false));
-  }, [imageId, imageUrl, imageLoading]);
+    loadUrl();
+  }, [imageId, imageUrl]);
 
   const time = new Date(message.created_at).toLocaleTimeString([], {
     hour: '2-digit',

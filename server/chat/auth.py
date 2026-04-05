@@ -30,10 +30,15 @@ def create_access_token(user_id: str, username: str):
 def get_current_user(request: Request):
     """Get currentUser from JWT in request headers."""
     auth_header = request.headers.get('Authorization')
-    if not auth_header or not auth_header.startswith('Bearer '):
-        raise HTTPException(status_code=401, detail="Missing or invalid authentication token")
+    token = None
     
-    token = auth_header.split(' ')[1]
+    if auth_header and auth_header.startswith('Bearer '):
+        token = auth_header.split(' ')[1]
+    else:
+        token = request.query_params.get('token')
+        
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing or invalid authentication token")
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload['user_id'], payload['username']

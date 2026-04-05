@@ -53,17 +53,14 @@ async def upload_stego_image(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-from fastapi import Response
+from fastapi.responses import RedirectResponse
+import os
 
 @router.get("/download/{image_id}")
 async def download_stego_image(image_id: str, auth: tuple = Depends(get_current_user)):
     user_id, _ = auth
-    supabase = _get_supabase()
     
-    try:
-        bucket_name = "chat-images"
-        file_bytes = supabase.storage.from_(bucket_name).download(image_id)
-        return Response(content=file_bytes, media_type="image/png")
-    except Exception as e:
-        logger.error(f"Supabase download failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to fetch image")
+    # Check if we should use public URL for high performance
+    # Since bucket is public, we can just redirect to Supabase directly
+    url = f"{os.environ.get('SUPABASE_URL')}/storage/v1/object/public/chat-images/{image_id}"
+    return RedirectResponse(url=url)
