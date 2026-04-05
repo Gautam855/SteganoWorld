@@ -64,8 +64,8 @@ export default function ChatPage() {
     let socket: Socket;
     getKeys().then((keys) => {
       if (keys?.token) {
-        const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
-        socket = io(API_BASE, {
+        const SOCKET_URL = process.env.NEXT_PUBLIC_API_URL || '';
+        socket = io(SOCKET_URL, {
           query: { token: keys.token }
         });
 

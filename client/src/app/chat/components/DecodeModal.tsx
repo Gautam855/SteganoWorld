@@ -306,7 +306,7 @@ export default function DecodeModal({ isOpen, onClose, privateKey }: DecodeModal
                       setLinkInput(e.target.value);
                       if (status !== 'idle') resetState();
                     }}
-                    placeholder="http://localhost:3000/shared?id=..."
+                    placeholder="Paste shared secure link here..."
                     className="w-full bg-black/50 border border-white/10 rounded-xl pl-10 pt-3 pb-3 pr-4 text-white placeholder:text-neutral-600 focus:outline-none focus:border-amber-500/50 transition-colors text-sm font-medium"
                     autoComplete="off"
                   />
