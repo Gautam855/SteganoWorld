@@ -36,21 +36,18 @@ async def upload_stego_image(
         # Read file contents
         content = await image.read()
         
-        # Upload to Supabase Storage
+        # Upload to Supabase Storage. Throws exception on failure.
         res = supabase.storage.from_(bucket_name).upload(file_name, content)
         
-        # Get public URL
-        # res looks like {'path': '...'} or {'error': '...'}
-        if "error" in res:
-             raise Exception(res["error"])
-
         public_url = supabase.storage.from_(bucket_name).get_public_url(file_name)
         
         return {"image_id": file_name, "url": public_url}
     
     except Exception as e:
         logger.error(f"Supabase upload failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to upload image")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/get/{image_id}")
 async def get_stego_image(image_id: str, auth: tuple = Depends(get_current_user)):
