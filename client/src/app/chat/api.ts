@@ -59,14 +59,14 @@ export async function registerUser(data: {
 }
 
 export async function requestChallenge(username: string) {
-  return apiRequest('/auth/challenge', {
+  return apiRequest('/challenge', {
     method: 'POST',
     body: JSON.stringify({ username }),
   });
 }
 
 export async function verifyChallenge(username: string, signature: string) {
-  return apiRequest('/auth/verify', {
+  return apiRequest('/verify', {
     method: 'POST',
     body: JSON.stringify({ username, signature }),
   });
@@ -80,7 +80,7 @@ export async function getUsers() {
 }
 
 export async function getUser(userId: string) {
-  return apiRequest(`/users/${userId}`);
+  return apiRequest(`/user/${userId}`);
 }
 
 export async function searchUsers(query: string) {
@@ -102,7 +102,7 @@ export async function sendMessage(data: {
   iv: string;
   message_type?: string;
 }) {
-  return apiRequest('/messages/send', {
+  return apiRequest('/send', {
     method: 'POST',
     body: JSON.stringify(data),
   });

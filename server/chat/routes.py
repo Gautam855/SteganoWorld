@@ -193,6 +193,50 @@ async def send_message(data: SendMessageRequest, auth: tuple = Depends(get_curre
     finally:
         db_session.remove()
 
+@router.get("/messages/{other_user_id}")
+async def get_message_history(other_user_id: str, limit: int = 30, before: str = None, auth: tuple = Depends(get_current_user)):
+    user_id, _ = auth
+    db = db_session()
+    try:
+        query = db.query(Message).filter(
+            ((Message.sender_id == user_id) & (Message.recipient_id == other_user_id)) |
+            ((Message.sender_id == other_user_id) & (Message.recipient_id == user_id))
+        )
+        
+        if before:
+            # Need to parse `before` timestamp format safely
+            try:
+                dt = datetime.fromisoformat(before.replace('Z', '+00:00'))
+                query = query.filter(Message.created_at < dt)
+            except ValueError:
+                pass
+                
+        messages = query.order_by(Message.created_at.desc()).limit(limit).all()
+        return {"messages": [m.to_dict() for m in reversed(messages)]}
+    except Exception as e:
+        logger.error(f"Fetch messages failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to fetch history")
+    finally:
+        db_session.remove()
+
+@router.put("/messages/read/{other_user_id}")
+async def mark_messages_as_read(other_user_id: str, auth: tuple = Depends(get_current_user)):
+    user_id, _ = auth
+    db = db_session()
+    try:
+        db.query(Message).filter(
+            Message.sender_id == other_user_id,
+            Message.recipient_id == user_id,
+            Message.is_read == False
+        ).update({"is_read": True})
+        db.commit()
+        return {"success": True}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Failed to mark as read")
+    finally:
+        db_session.remove()
+
 @router.get("/conversations")
 async def get_conversations(auth: tuple = Depends(get_current_user)):
     user_id, _ = auth
