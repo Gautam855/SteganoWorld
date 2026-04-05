@@ -21,19 +21,20 @@ def _get_supabase() -> Client:
 
 @router.post("/upload")
 async def upload_stego_image(
-    file: UploadFile = File(...),
+    image: UploadFile = File(...),
+    type: str = "image",
     auth: tuple = Depends(get_current_user)
 ):
     user_id, _ = auth
     supabase = _get_supabase()
     
     try:
-        file_ext = file.filename.split('.')[-1]
+        file_ext = image.filename.split('.')[-1]
         file_name = f"{uuid.uuid4()}.{file_ext}"
         bucket_name = "chat-images"
         
         # Read file contents
-        content = await file.read()
+        content = await image.read()
         
         # Upload to Supabase Storage
         res = supabase.storage.from_(bucket_name).upload(file_name, content)
