@@ -599,7 +599,7 @@ export default function ChatWindow({
             });
 
             if (result.data) {
-              setMessages(prev => [...prev, { ...result.data, _status: 'sent' as const, _optimisticText: `🖼️ Stego image sent` }]);
+              setMessages(prev => [...prev, { ...result.data, _status: 'sent' as const, _optimisticText: `[STEGO:${image_id}] ` }]);
               onNewMessage?.();
             }
           }}

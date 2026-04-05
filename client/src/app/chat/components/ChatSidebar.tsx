@@ -225,7 +225,9 @@ export default function ChatSidebar({
                   <div className="flex items-center justify-between gap-2">
                     <span className={`text-xs truncate flex items-center gap-1.5 ${conv.unread_count > 0 ? 'text-neutral-300 font-medium' : 'text-neutral-500'}`}>
                       <Lock size={10} className="shrink-0" />
-                      Encrypted message
+                      {conv.last_message?.message_type === 'image' ? 'Image message' : 
+                       conv.last_message?.message_type === 'stego' ? 'Stego message' : 
+                       'Encrypted message'}
                     </span>
                     {conv.unread_count > 0 && (
                       <span className="shrink-0 w-5 h-5 flex items-center justify-center bg-indigo-500 text-white text-[10px] font-bold rounded-full shadow-lg shadow-indigo-500/40">
