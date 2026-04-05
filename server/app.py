@@ -23,9 +23,9 @@ logger = logging.getLogger('SteganoWorld')
 
 # ─── App Init ─────────────────────────────────────────────────────
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
-if not app.config['SECRET_KEY']:
-    raise RuntimeError("SECRET_KEY environment variable is not set!")
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'default-stegano-fallback-key-change-it')
+if os.environ.get('SECRET_KEY') is None:
+    logger.warning("SECRET_KEY environment variable is not set! Using default (UNSAFE).")
 
 # ─── Chat Module Init ─────────────────────────────────────────────
 from chat.database import init_db
