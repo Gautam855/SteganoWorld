@@ -49,16 +49,17 @@ async def upload_stego_image(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/get/{image_id}")
-async def get_stego_image(image_id: str, auth: tuple = Depends(get_current_user)):
+from fastapi import Response
+
+@router.get("/download/{image_id}")
+async def download_stego_image(image_id: str, auth: tuple = Depends(get_current_user)):
     user_id, _ = auth
     supabase = _get_supabase()
     
     try:
         bucket_name = "chat-images"
-        # Since images are encrypted, we just provide the URL or the raw data
-        public_url = supabase.storage.from_(bucket_name).get_public_url(image_id)
-        return {"url": public_url}
+        file_bytes = supabase.storage.from_(bucket_name).download(image_id)
+        return Response(content=file_bytes, media_type="image/png")
     except Exception as e:
-        logger.error(f"Supabase fetch failed: {str(e)}")
+        logger.error(f"Supabase download failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to fetch image")
