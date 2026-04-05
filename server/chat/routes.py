@@ -59,7 +59,12 @@ async def register_user(data: RegisterRequest):
         db.add(new_user)
         db.commit()
         
-        return {"id": new_user.id, "message": "User registered successfully"}
+        token = create_access_token(new_user.id, new_user.username)
+        return {
+            "token": token, 
+            "user": new_user.to_dict(include_public_key=True),
+            "message": "User registered successfully"
+        }
     except HTTPException:
         raise
     except Exception as e:
