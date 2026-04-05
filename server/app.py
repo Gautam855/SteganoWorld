@@ -43,6 +43,7 @@ ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://steganoworld.vercel.app",
+    "https://stegano-world.vercel.app"
 ]
 CORS(app, origins=ALLOWED_ORIGINS)
 
