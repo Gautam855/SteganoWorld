@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock, Upload, Link as LinkIcon, Check, Users, Search, Loader2, Flame, ImagePlus, AlertTriangle } from 'lucide-react';
 import { searchUsers, createSharedLink, uploadChatImage } from '../api';
@@ -123,26 +123,31 @@ export default function SharedLinkModal({ onClose, currentUserId, publicKey }: S
     setError('Message too big even after compression! Try a higher-resolution Cover Carrier Image.');
   };
 
-  const handleSearch = async (query: string) => {
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      if (searchQuery.trim().length >= 2) {
+        setIsSearching(true);
+        try {
+          const data = await searchUsers(searchQuery.trim());
+          const filtered = (data.users || []).filter((u: ChatUser) => 
+            u.id !== currentUserId && !selectedUsers.some(su => su.id === u.id)
+          );
+          setSearchResults(filtered);
+        } catch (err) {
+          console.error(err);
+        } finally {
+          setIsSearching(false);
+        }
+      } else {
+        setSearchResults([]);
+        setIsSearching(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [searchQuery, currentUserId, selectedUsers]);
+
+  const handleSearch = (query: string) => {
     setSearchQuery(query);
-    if (query.trim().length < 2) {
-      setSearchResults([]);
-      return;
-    }
-    
-    setIsSearching(true);
-    try {
-      const data = await searchUsers(query);
-      // Filter out current user and already selected users
-      const filtered = (data.users || []).filter((u: ChatUser) => 
-        u.id !== currentUserId && !selectedUsers.some(su => su.id === u.id)
-      );
-      setSearchResults(filtered);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setIsSearching(false);
-    }
   };
 
   const addAccess = (user: ChatUser) => {
