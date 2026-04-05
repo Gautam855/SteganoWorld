@@ -60,7 +60,7 @@ async def encrypt_text_api(
 
         # Encrypt and hide
         encrypted_payload = encrypt_binary(text, password, data_type=DATA_TYPE_TEXT)
-        secret_img = lsb.hide(carrier_img, encrypted_payload, auto_convert_to_str=False)
+        secret_img = lsb.hide(carrier_img, encrypted_payload)
 
         buf = BytesIO()
         secret_img.save(buf, format="PNG")
@@ -73,7 +73,9 @@ async def encrypt_text_api(
         raise
     except Exception as e:
         logger.error(f"Text encryption failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Text encryption failed. Please check your inputs.")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/decrypt_text")
 async def decrypt_text_api(
@@ -128,7 +130,7 @@ async def encrypt_images_api(
         if carrier_img.mode != 'RGB':
             carrier_img = carrier_img.convert('RGB')
 
-        result_img = lsb.hide(carrier_img, encrypted_payload, auto_convert_to_str=False)
+        result_img = lsb.hide(carrier_img, encrypted_payload)
 
         buf = BytesIO()
         result_img.save(buf, format="PNG")
