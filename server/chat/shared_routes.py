@@ -11,7 +11,7 @@ import logging
 
 logger = logging.getLogger('SteganoWorld.Shared')
 
-router = APIRouter(prefix="/api/shared", tags=["shared"])
+router = APIRouter(prefix="/api/chat/shared", tags=["shared"])
 
 class ShareRequest(BaseModel):
     image_id: str
@@ -49,7 +49,7 @@ async def create_shared_link(data: ShareRequest, auth: tuple = Depends(get_curre
     finally:
         db_session.remove()
 
-@router.get("/access/{link_id}")
+@router.get("/{link_id}")
 async def get_shared_access(link_id: str, auth: tuple = Depends(get_current_user)):
     user_id, _ = auth
     db = db_session()
