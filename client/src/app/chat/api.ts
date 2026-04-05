@@ -65,10 +65,10 @@ export async function requestChallenge(username: string) {
   });
 }
 
-export async function verifyChallenge(username: string, signature: string) {
+export async function verifyChallenge(username: string, challenge: string, signature: string) {
   return apiRequest('/verify', {
     method: 'POST',
-    body: JSON.stringify({ username, signature }),
+    body: JSON.stringify({ username, challenge, signature }),
   });
 }
 

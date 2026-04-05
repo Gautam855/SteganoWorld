@@ -89,7 +89,7 @@ export default function AuthPage({ onAuthSuccess }: AuthPageProps) {
       const signature = await signChallenge(challengeRes.challenge, keys.signingPrivateKey);
 
       setKeyGenStatus('Verifying signature...');
-      const verifyRes = await verifyChallenge(keys.username, signature);
+      const verifyRes = await verifyChallenge(keys.username, challengeRes.challenge, signature);
 
       setKeyGenStatus('Saving keys to device...');
       await saveKeys({
