@@ -84,7 +84,7 @@ export async function getUser(userId: string) {
 }
 
 export async function searchUsers(query: string) {
-  return apiRequest(`/users/search?q=${encodeURIComponent(query)}`);
+  return apiRequest(`/users?search=${encodeURIComponent(query)}`);
 }
 
 export async function getMe() {
