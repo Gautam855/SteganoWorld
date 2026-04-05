@@ -44,10 +44,10 @@ init_socketio(app)               # Initialize WebSocket support
 # Can be a comma-separated list in ALLOWED_ORIGINS env var
 env_origins = os.environ.get('ALLOWED_ORIGINS', '')
 ALLOWED_ORIGINS = [origin.strip() for origin in env_origins.split(',') if origin.strip()] or [
+    "https://stegano-world.vercel.app",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://steganoworld.vercel.app",
-    "https://stegano-world.vercel.app"
 ]
 CORS(app, origins=ALLOWED_ORIGINS)
 
