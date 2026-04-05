@@ -9,7 +9,12 @@ export const metadata: Metadata = {
   title: "StegoWorld | Secret Messaging & Hidden Images",
   description: "The ultimate tool for secure and hidden communication using advanced steganography.",
   icons: {
-    icon: "/favicon.png",
+    icon: [
+      { url: "/favicon.png" },
+      { url: "/icon.png" },
+    ],
+    shortcut: "/favicon.png",
+    apple: "/favicon.png",
   },
 };
 
