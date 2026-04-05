@@ -28,10 +28,14 @@ app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'stegano-flask-secret-ke
 # ─── Chat Module Init ─────────────────────────────────────────────
 from chat.database import init_db
 from chat.routes import chat_bp
+from chat.stegano_routes import stego_bp
+from chat.shared_routes import shared_bp
 from chat.socket_events import init_socketio, socketio
 
 init_db(app)                    # Initialize SQLite database + create tables
 app.register_blueprint(chat_bp)  # Register /api/chat/* routes
+app.register_blueprint(stego_bp) # Register /api/chat/stego/* routes
+app.register_blueprint(shared_bp) # Register /api/shared/* routes
 init_socketio(app)               # Initialize WebSocket support
 
 # FIX 3: CORS — Only allow specific origins (not the entire internet)
@@ -42,14 +46,14 @@ ALLOWED_ORIGINS = [
 ]
 CORS(app, origins=ALLOWED_ORIGINS)
 
-# FIX 2: File upload limit — 16 MB max (prevents DoS via giant uploads)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
+# FIX 2: File upload limit — 20 MB max (prevents DoS via giant uploads)
+app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB
 
-# FIX 4: Rate Limiting — prevents brute-force password attacks
+# FIX 4: Rate Limiting — prevents brute-force attacks (higher limit for image-heavy chat)
 limiter = Limiter(
     get_remote_address,
     app=app,
-    default_limits=["30 per minute"],
+    default_limits=["120 per minute"],
     storage_uri="memory://",
 )
 

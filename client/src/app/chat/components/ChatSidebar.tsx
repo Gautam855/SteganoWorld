@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getConversations, searchUsers } from '../api';
+import { getCachedConversations, setCachedConversations } from '../cache';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MessageSquare, Users, Lock, ChevronRight } from 'lucide-react';
 
@@ -35,11 +36,18 @@ export default function ChatSidebar({
   onSelectUser,
   refreshTrigger,
 }: ChatSidebarProps) {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>(() => {
+    // INSTANT: Load from cache on first render
+    const cached = getCachedConversations();
+    return cached || [];
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<ChatUser[]>([]);
   const [isSearching, setIsSearching] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => {
+    // Skip loading state if we have cache
+    return !getCachedConversations();
+  });
 
   useEffect(() => {
     loadConversations();
@@ -60,7 +68,9 @@ export default function ChatSidebar({
   async function loadConversations() {
     try {
       const data = await getConversations();
-      setConversations(data.conversations || []);
+      const convs = data.conversations || [];
+      setConversations(convs);
+      setCachedConversations(convs);
     } catch (err) {
       console.error('Failed to load conversations:', err);
     } finally {

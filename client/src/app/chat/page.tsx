@@ -5,9 +5,12 @@ import { getKeys, deleteKeys, exportKeysForBackup } from './keyStore';
 import AuthPage from './components/AuthPage';
 import ChatSidebar from './components/ChatSidebar';
 import ChatWindow from './components/ChatWindow';
+import DecodeModal from './components/DecodeModal';
+import SharedLinkModal from './components/SharedLinkModal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, Download, Shield, Menu, X, Info, Key } from 'lucide-react';
+import { LogOut, Download, Shield, Menu, X, Info, Key, Eye, Link as LinkIcon, BookOpen } from 'lucide-react';
 import { io, Socket } from 'socket.io-client';
+import Link from 'next/link';
 
 interface ChatUser {
   id: string;
@@ -47,6 +50,8 @@ export default function ChatPage() {
   const [readMessageIds, setReadMessageIds] = useState<string[]>([]);
   const [showMobileSidebar, setShowMobileSidebar] = useState(true);
   const [showBackupModal, setShowBackupModal] = useState(false);
+  const [showDecodeModal, setShowDecodeModal] = useState(false);
+  const [showSharedLinkModal, setShowSharedLinkModal] = useState(false);
   const [backupData, setBackupData] = useState('');
 
   useEffect(() => {
@@ -115,6 +120,11 @@ export default function ChatPage() {
   async function handleLogout() {
     if (confirm('Are you sure? Make sure you have exported your key backup first!')) {
       await deleteKeys();
+      // Clear cache on logout
+      if (typeof window !== 'undefined') {
+        const { clearAllCache } = await import('./cache');
+        clearAllCache();
+      }
       setIsAuthenticated(false);
       setCurrentUserId('');
       setPrivateKey('');
@@ -191,13 +201,38 @@ export default function ChatPage() {
              <div className="w-2 h-2 bg-green-500 rounded-full shadow-[0_0_8px_rgba(34,197,94,0.6)]" />
              <span className="text-xs font-semibold text-neutral-300">@{currentUsername}</span>
           </div>
+          <Link 
+            href="/guide"
+            target="_blank"
+            className="p-2.5 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20 text-sky-400 rounded-xl transition-colors tooltip-trigger relative group"
+            title="Docs & Protocol Guide"
+          >
+            <BookOpen size={16} />
+            <span className="absolute -bottom-10 right-0 w-max bg-sky-950 text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none text-sky-200 z-50">Docs & Guide</span>
+          </Link>
           <button 
             onClick={handleExportKeys} 
             className="p-2.5 bg-white/5 hover:bg-white/10 border border-white/5 rounded-xl text-neutral-300 transition-colors tooltip-trigger relative group"
             title="Export Key Backup"
           >
             <Download size={16} />
-            <span className="absolute -bottom-10 right-0 w-max bg-black text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Backup Keys</span>
+            <span className="absolute -bottom-10 right-0 w-max bg-black text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Backup Keys</span>
+          </button>
+          <button 
+            onClick={() => setShowSharedLinkModal(true)} 
+            className="p-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 rounded-xl transition-colors relative group"
+            title="Create Shareable Link"
+          >
+            <LinkIcon size={16} />
+            <span className="absolute -bottom-10 right-0 w-max bg-emerald-950 text-emerald-200 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Create Link</span>
+          </button>
+          <button 
+            onClick={() => setShowDecodeModal(true)} 
+            className="p-2.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/20 text-amber-400 rounded-xl transition-colors relative group"
+            title="Decode Stego Image"
+          >
+            <Eye size={16} />
+            <span className="absolute -bottom-10 right-0 w-max bg-amber-950 text-amber-200 text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">Decode</span>
           </button>
           <button 
             onClick={handleLogout} 
@@ -253,6 +288,17 @@ export default function ChatPage() {
           />
         </div>
       </div>
+
+      {/* Shared Link Modal */}
+      <AnimatePresence>
+        {showSharedLinkModal && (
+          <SharedLinkModal
+            onClose={() => setShowSharedLinkModal(false)}
+            currentUserId={currentUserId}
+            publicKey={publicKey}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Backup Modal */}
       <AnimatePresence>
@@ -317,6 +363,13 @@ export default function ChatPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Decode Stego Image Modal */}
+      <DecodeModal
+        isOpen={showDecodeModal}
+        onClose={() => setShowDecodeModal(false)}
+        privateKey={privateKey}
+      />
     </div>
   );
 }

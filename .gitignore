@@ -22,3 +22,8 @@ client/.env.local
 # IDEs
 .vscode/
 .idea/
+
+# Uploads & DB (stored in Supabase, not git)
+uploads/
+server/uploads/
+server/instance/

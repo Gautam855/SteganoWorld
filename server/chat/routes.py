@@ -372,26 +372,47 @@ def send_message(current_user_id, current_username):
 @token_required
 def get_conversation(current_user_id, current_username, other_user_id):
     """
-    Get conversation with a specific user.
+    Get conversation with a specific user (paginated).
     Returns encrypted messages — client decrypts on device.
     
     Query params:
-        ?limit=50 — max messages to return
+        ?limit=30    — max messages to return (default 30, max 100)
+        ?before=ISO  — fetch messages older than this timestamp (cursor)
     """
-    limit = min(int(request.args.get('limit', 50)), 100)
+    limit = min(int(request.args.get('limit', 30)), 100)
+    before = request.args.get('before', None)
 
-    messages = Message.query.filter(
+    query = Message.query.filter(
         db.or_(
             db.and_(Message.sender_id == current_user_id, Message.recipient_id == other_user_id),
             db.and_(Message.sender_id == other_user_id, Message.recipient_id == current_user_id),
         )
-    ).order_by(Message.created_at.desc()).limit(limit).all()
+    )
+
+    # Cursor-based pagination: fetch messages BEFORE a given timestamp
+    if before:
+        try:
+            before_dt = datetime.fromisoformat(before.replace('Z', '+00:00'))
+            query = query.filter(Message.created_at < before_dt)
+        except ValueError:
+            pass
+
+    messages = query.order_by(Message.created_at.desc()).limit(limit + 1).all()
+
+    # Check if there are more messages beyond this page
+    has_more = len(messages) > limit
+    if has_more:
+        messages = messages[:limit]
 
     # Reverse to get chronological order
     messages.reverse()
 
+    oldest_timestamp = messages[0].created_at.isoformat() if messages else None
+
     return jsonify({
-        'messages': [m.to_dict() for m in messages]
+        'messages': [m.to_dict() for m in messages],
+        'has_more': has_more,
+        'oldest_timestamp': oldest_timestamp,
     }), 200
 
 

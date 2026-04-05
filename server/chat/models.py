@@ -106,3 +106,39 @@ class Message(db.Model):
             'is_read': self.is_read,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class SharedLink(db.Model):
+    """
+    Secure Shared Link for Stego Images.
+    Owner can grant access to specific users.
+    """
+    __tablename__ = 'shared_links'
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id = db.Column(db.String(36), db.ForeignKey('chat_users.id'), nullable=False, index=True)
+    image_id = db.Column(db.String(100), nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Burn-after-reading / Ephemerality parameters
+    burn_after_views = db.Column(db.Integer, default=0) # 0 means disabled
+    views_count = db.Column(db.Integer, default=0)
+    
+    # Relationships
+    access_list = db.relationship('SharedLinkAccess', backref='link', cascade='all, delete-orphan', lazy='dynamic')
+
+
+class SharedLinkAccess(db.Model):
+    """
+    Zero-Knowledge Access Record for a Shared Link.
+    Stores the AES key encrypted uniquely with the authorized user's public key.
+    """
+    __tablename__ = 'shared_link_access'
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    link_id = db.Column(db.String(36), db.ForeignKey('shared_links.id'), nullable=False, index=True)
+    user_id = db.Column(db.String(36), db.ForeignKey('chat_users.id'), nullable=False, index=True)
+    
+    # The AES key used to encrypt the image data, encrypted with THIS user's RSA public key
+    encrypted_aes_key = db.Column(db.Text, nullable=False)
+

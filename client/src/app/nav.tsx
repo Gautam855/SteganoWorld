@@ -1,93 +1,136 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { HoveredLink, Menu, MenuItem } from "../../components/ui/navbar-menu";
 import { cn } from "../../utils/cn";
-import { ModeToggle } from "../../components/mode-toggle";
 import { HealthIndicator } from "../../components/health-indicator";
-import { Shield, Lock, Eye, BookOpen, Home } from "lucide-react";
+import { Shield, Lock, Eye, BookOpen, Home, MessageCircle, FileText, Image as ImageIcon } from "lucide-react";
+import { usePathname } from "next/navigation";
 
 export function NavbarDemo({ className }: { className?: string }) {
-  const [active, setActive] = useState<any>(null);
+  const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
 
-  const hideLabel = React.useMemo(() => (
-    <div className="flex items-center gap-2">
-      <Lock size={16} className="text-amber-500" /> Hide Data
-    </div>
-  ), []);
+  useEffect(() => { setMounted(true); }, []);
 
-  const revealLabel = React.useMemo(() => (
-    <div className="flex items-center gap-2">
-      <Eye size={16} className="text-emerald-500" /> Reveal Data
-    </div>
-  ), []);
-  
+  const navItems = [
+    { href: "/", icon: Home, label: "Home", activeClass: "bg-white/10 text-white", dotClass: "bg-white" },
+    { 
+      href: "/EncryptText", 
+      icon: Lock, 
+      label: "Encrypt", 
+      activeClass: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 focus-bg", 
+      dotClass: "bg-emerald-400",
+      subItems: [
+        { href: "/EncryptText", label: "Hide Text", icon: FileText, hoverClass: "hover:bg-emerald-500/10 hover:text-emerald-400" },
+        { href: "/EncryptImage", label: "Hide Image", icon: ImageIcon, hoverClass: "hover:bg-emerald-500/10 hover:text-emerald-400" }
+      ]
+    },
+    { 
+      href: "/DecryptText", 
+      icon: Eye, 
+      label: "Decrypt", 
+      activeClass: "bg-sky-500/10 text-sky-400 border border-sky-500/20 focus-bg", 
+      dotClass: "bg-sky-400",
+      subItems: [
+        { href: "/DecryptText", label: "Extract Text", icon: FileText, hoverClass: "hover:bg-sky-500/10 hover:text-sky-400" },
+        { href: "/DecryptImage", label: "Extract Image", icon: ImageIcon, hoverClass: "hover:bg-sky-500/10 hover:text-sky-400" }
+      ]
+    },
+    { href: "/chat", icon: MessageCircle, label: "Chat", activeClass: "bg-indigo-500/10 text-indigo-400 border border-indigo-500/20", dotClass: "bg-indigo-400" },
+    { href: "/guide", icon: BookOpen, label: "Guide", activeClass: "bg-amber-500/10 text-amber-400 border border-amber-500/20", dotClass: "bg-amber-400" },
+  ];
+
   return (
-    <div className={cn("fixed top-10 inset-x-0 max-w-5xl mx-auto z-50 px-4", className)}>
-      <div className="flex items-center justify-between bg-white/[0.05] dark:bg-black/40 backdrop-blur-xl border border-white/[0.1] dark:border-white/[0.05] rounded-full px-6 py-2 shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
-        
-        {/* LOGO SECTION */}
-        <Link href="/" className="flex items-center gap-2 group shrink-0 pr-4">
-          <div className="p-1.5 bg-sky-500 rounded-lg group-hover:rotate-12 transition-transform shadow-lg shadow-sky-500/40">
-            <Shield size={18} className="text-white" />
+    <div className={cn("fixed top-6 inset-x-0 max-w-4xl mx-auto z-50 px-4", className)}>
+      <div
+        className={cn(
+          "flex items-center justify-between",
+          "bg-[#08080c]/80 backdrop-blur-2xl",
+          "border border-white/10",
+          "rounded-[24px] px-3 py-2",
+          "shadow-[0_8px_32px_rgba(0,0,0,0.4),inset_0_1px_0_rgba(255,255,255,0.05)]",
+          "transition-all duration-300",
+          mounted ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-4"
+        )}
+      >
+        {/* LOGO */}
+        <Link href="/" className="flex items-center gap-2.5 group shrink-0 pl-2 pr-4">
+          <div className="p-2 bg-gradient-to-br from-emerald-500 to-sky-500 rounded-xl group-hover:rotate-12 group-hover:scale-110 transition-all duration-300 shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+            <Shield size={16} className="text-white" />
           </div>
-          <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-sky-200 tracking-tighter">
-            STEGANO<span className="text-sky-500">WORLD</span>
+          <span className="text-[17px] font-black tracking-tight leading-none">
+            STEGANO<span className="text-emerald-500">WORLD</span>
           </span>
         </Link>
 
-        {/* UNIFIED MENU ITEMS */}
-        <div className="flex-1 flex justify-center ml-2">
-          <Menu setActive={setActive}>
-            <div className="flex gap-8 items-center text-sm font-medium">
-              <Link href="/" className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors">
-                <Home size={16} /> Home
-              </Link>
+        {/* NAV LINKS */}
+        <nav className="flex items-center gap-1">
+          {navItems.map(({ href, icon: Icon, label, activeClass, dotClass, subItems }: any, i: number) => {
+            const isActive = href === "/"
+              ? pathname === "/"
+              : pathname === href || pathname?.startsWith(href + "/");
 
-              <MenuItem setActive={setActive} active={active} item={hideLabel}>
-                <div className="flex flex-col space-y-4 text-sm p-2 w-[240px]">
-                  <HoveredLink href="/EncryptImage" className="flex items-center gap-3">
-                    <div className="p-2 bg-amber-500/10 rounded-lg"><Lock size={16} className="text-amber-500" /></div>
-                    Image in Image
-                  </HoveredLink>
-                  <HoveredLink href="/EncryptText" className="flex items-center gap-3">
-                    <div className="p-2 bg-sky-500/10 rounded-lg"><Lock size={16} className="text-sky-500" /></div>
-                    Text in Image
-                  </HoveredLink>
-                </div>
-              </MenuItem>
+            return (
+              <div key={href} className="relative group z-50">
+                <Link
+                  href={href}
+                  style={{ animationDelay: `${i * 50}ms` }}
+                  className={cn(
+                    "relative flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-bold tracking-tight",
+                    "transition-all duration-200",
+                    isActive
+                      ? activeClass
+                      : "text-white/40 hover:text-white/90 hover:bg-white/5"
+                  )}
+                >
+                  <Icon size={15} strokeWidth={2.2} />
+                  <span className="hidden sm:inline">{label}</span>
 
-              <MenuItem setActive={setActive} active={active} item={revealLabel}>
-                <div className="flex flex-col space-y-4 text-sm p-2 w-[240px]">
-                  <HoveredLink href="/DecryptImage" className="flex items-center gap-3">
-                    <div className="p-2 bg-emerald-500/10 rounded-lg"><Eye size={16} className="text-emerald-500" /></div>
-                    Image from Image
-                  </HoveredLink>
-                  <HoveredLink href="/DecryptText" className="flex items-center gap-3">
-                    <div className="p-2 bg-rose-500/10 rounded-lg"><Eye size={16} className="text-rose-500" /></div>
-                    Text from Image
-                  </HoveredLink>
-                </div>
-              </MenuItem>
+                  {/* Active indicator dot */}
+                  {isActive && (
+                    <span
+                      className={cn(
+                        "absolute bottom-0.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full",
+                        dotClass
+                      )}
+                    />
+                  )}
+                </Link>
 
-              <Link href="/Instructions" className="hidden md:flex items-center gap-2 text-neutral-400 hover:text-white transition-colors">
-                <BookOpen size={16} /> Guide
-              </Link>
+                {/* DROPDOWN SUB-ITEMS */}
+                {subItems && (
+                  <div className="absolute top-[80%] pt-4 left-1/2 -translate-x-1/2 w-48 opacity-0 invisible translate-y-2 group-hover:opacity-100 group-hover:visible group-hover:translate-y-0 transition-all duration-300 pointer-events-none group-hover:pointer-events-auto">
+                    <div className="bg-[#0f0f15]/95 backdrop-blur-3xl border border-white/10 rounded-2xl p-2 flex flex-col gap-1 relative overflow-hidden shadow-2xl">
+                      <div className="absolute inset-0 bg-gradient-to-b from-white/5 to-transparent pointer-events-none" />
+                      {subItems.map((sub: any) => {
+                        const SubIcon = sub.icon;
+                        return (
+                          <Link
+                            key={sub.href}
+                            href={sub.href}
+                            className={cn(
+                              "flex items-center gap-2.5 px-3 py-2.5 text-xs font-semibold text-neutral-400 rounded-xl transition-all relative z-10",
+                              sub.hoverClass || "hover:text-white hover:bg-white/10"
+                            )}
+                          >
+                            <SubIcon size={14} className="opacity-80" />
+                            {sub.label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </nav>
 
-              <Link href="/chat" className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors text-purple-400">
-                <Shield size={16} /> Chat
-              </Link>
-            </div>
-          </Menu>
-        </div>
-
-        {/* COMBINED ACTIONS */}
-        <div className="flex items-center gap-3 pl-4 shrink-0">
-          <div className="hidden lg:block scale-90">
+        {/* RIGHT: HEALTH */}
+        <div className="flex items-center gap-3 shrink-0 ml-2">
+          <div className="w-px h-5 bg-white/10" />
+          <div className="scale-90 opacity-90 hover:opacity-100 transition-opacity pr-1">
             <HealthIndicator />
-          </div>
-          <div className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-sky-500/10 transition-colors">
-            <ModeToggle />
           </div>
         </div>
       </div>

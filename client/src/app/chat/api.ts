@@ -108,8 +108,10 @@ export async function sendMessage(data: {
   });
 }
 
-export async function getConversation(otherUserId: string, limit = 50) {
-  return apiRequest(`/messages/${otherUserId}?limit=${limit}`);
+export async function getConversation(otherUserId: string, limit = 30, before?: string) {
+  let url = `/messages/${otherUserId}?limit=${limit}`;
+  if (before) url += `&before=${encodeURIComponent(before)}`;
+  return apiRequest(url);
 }
 
 export async function getConversations() {
@@ -119,6 +121,64 @@ export async function getConversations() {
 export async function markAsRead(otherUserId: string) {
   return apiRequest(`/messages/read/${otherUserId}`, {
     method: 'PUT',
+  });
+}
+
+
+// ─── Image API (Normal + Stego) ──────────────────────────────────
+
+export async function uploadChatImage(file: File | Blob, type: 'image' | 'stego' = 'image'): Promise<{ image_id: string }> {
+  const keys = await getKeys();
+  const formData = new FormData();
+  const filename = type === 'stego' ? 'stego.png' : (file instanceof File ? file.name : 'image.png');
+  formData.append('image', file, filename);
+
+  const response = await fetch(`${CHAT_API}/stego/upload?type=${type}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${keys?.token || ''}`,
+    },
+    body: formData,
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error || 'Upload failed');
+  return data;
+}
+
+// Keep backward compatibility
+export async function uploadStegoImage(blob: Blob): Promise<{ image_id: string }> {
+  return uploadChatImage(blob, 'stego');
+}
+
+export async function downloadStegoImage(imageId: string): Promise<Blob> {
+  const keys = await getKeys();
+  const response = await fetch(`${CHAT_API}/stego/download/${imageId}`, {
+    headers: {
+      'Authorization': `Bearer ${keys?.token || ''}`,
+    },
+  });
+
+  if (!response.ok) throw new Error('Failed to download image');
+  return response.blob();
+}
+
+// ─── Shared Links API ─────────────────────────────────────────────
+
+export async function createSharedLink(data: {
+  image_id: string;
+  access_list: { user_id: string; encrypted_aes_key: string }[];
+  burn_after_views?: number;
+}) {
+  return apiRequest('/shared/create', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function getSharedLink(linkId: string) {
+  return apiRequest(`/shared/${linkId}`, {
+    method: 'GET',
   });
 }
 

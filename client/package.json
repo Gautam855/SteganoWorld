@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.0.2",
+    "@react-three/drei": "^9.122.0",
+    "@react-three/fiber": "^8.18.0",
     "@supabase/supabase-js": "^2.101.1",
     "@sweetalert2/theme-dark": "^5.0.16",
     "@tabler/icons-react": "^3.4.0",
@@ -26,12 +28,14 @@
     "simplex-noise": "^4.0.1",
     "socket.io-client": "^4.8.3",
     "sweetalert2": "^11.6.13",
-    "tailwind-merge": "^2.6.1"
+    "tailwind-merge": "^2.6.1",
+    "three": "^0.183.2"
   },
   "devDependencies": {
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "@types/three": "^0.183.1",
     "autoprefixer": "^10.4.19",
     "eslint": "^8",
     "eslint-config-next": "14.2.3",

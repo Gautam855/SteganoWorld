@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { encryptMessage, prewarmKeys } from '../crypto';
-import { sendMessage as apiSendMessage, getConversation, markAsRead } from '../api';
+import { sendMessage as apiSendMessage, getConversation, markAsRead, uploadStegoImage, uploadChatImage } from '../api';
+import { getCachedMessages, setCachedMessages, invalidateMessages } from '../cache';
 import MessageBubble from './MessageBubble';
+import SteganoModal from './SteganoModal';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Shield, Lock } from 'lucide-react';
+import { Send, Shield, Lock, Eye, Paperclip } from 'lucide-react';
 
 interface ChatUser {
   id: string;
@@ -63,8 +65,15 @@ export default function ChatWindow({
   const [messages, setMessages] = useState<MessageData[]>([]);
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [oldestTimestamp, setOldestTimestamp] = useState<string | null>(null);
+  const [showSteganoModal, setShowSteganoModal] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+  const isInitialLoad = useRef(true);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -92,6 +101,7 @@ export default function ChatWindow({
         return [...prev, { ...incomingMessage, _status: 'delivered' }];
       });
       markAsRead(selectedUser.id).catch(() => {});
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     }
   }, [incomingMessage, selectedUser]);
 
@@ -115,16 +125,52 @@ export default function ChatWindow({
     ));
   }, [readMessageIds, currentUserId]);
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom and update cache
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+    if (isInitialLoad.current) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'auto' });
+      isInitialLoad.current = false;
+    }
+    // Automatically update cache whenever messages change
+    if (selectedUser && messages.length > 0) {
+      setCachedMessages(selectedUser.id, {
+        messages,
+        has_more: hasMore,
+        oldest_timestamp: oldestTimestamp,
+      });
+    }
+  }, [messages, selectedUser, hasMore, oldestTimestamp]);
 
+  // Scroll to bottom when we send a new message
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
+
+  // Load latest messages (initial load) — stale-while-revalidate
   async function loadMessages() {
     if (!selectedUser) return;
-    setLoading(true);
+    isInitialLoad.current = true;
+
+    // 1. INSTANT: Show cached messages immediately
+    const cached = getCachedMessages(selectedUser.id);
+    if (cached && cached.messages?.length) {
+      const cachedMsgs: MessageData[] = cached.messages.map((m: MessageData) => ({
+        ...m,
+        _status: m.sender_id === currentUserId
+          ? (m.is_read ? 'read' : 'sent')
+          : undefined,
+      }));
+      setMessages(cachedMsgs);
+      setHasMore(cached.has_more || false);
+      setOldestTimestamp(cached.oldest_timestamp || null);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+
+    // 2. BACKGROUND: Fetch fresh data
     try {
-      const data = await getConversation(selectedUser.id);
+      const data = await getConversation(selectedUser.id, 30);
       const msgs: MessageData[] = (data.messages || []).map((m: MessageData) => ({
         ...m,
         _status: m.sender_id === currentUserId
@@ -132,12 +178,71 @@ export default function ChatWindow({
           : undefined,
       }));
       setMessages(msgs);
+      setHasMore(data.has_more || false);
+      setOldestTimestamp(data.oldest_timestamp || null);
+
+      // 3. Cache the fresh data
+      setCachedMessages(selectedUser.id, {
+        messages: data.messages || [],
+        has_more: data.has_more || false,
+        oldest_timestamp: data.oldest_timestamp || null,
+      });
     } catch (err) {
       console.error('Failed to load messages:', err);
     } finally {
       setLoading(false);
     }
   }
+
+  // Load older messages (infinite scroll)
+  const loadOlderMessages = useCallback(async () => {
+    if (!selectedUser || loadingMore || !hasMore || !oldestTimestamp) return;
+    setLoadingMore(true);
+
+    // Save scroll position before prepending
+    const container = messagesContainerRef.current;
+    const prevScrollHeight = container?.scrollHeight || 0;
+
+    try {
+      const data = await getConversation(selectedUser.id, 30, oldestTimestamp);
+      const olderMsgs: MessageData[] = (data.messages || []).map((m: MessageData) => ({
+        ...m,
+        _status: m.sender_id === currentUserId
+          ? (m.is_read ? 'read' : 'sent')
+          : undefined,
+      }));
+
+      if (olderMsgs.length > 0) {
+        setMessages(prev => [...olderMsgs, ...prev]);
+        setHasMore(data.has_more || false);
+        setOldestTimestamp(data.oldest_timestamp || null);
+
+        // Restore scroll position after prepending
+        requestAnimationFrame(() => {
+          if (container) {
+            const newScrollHeight = container.scrollHeight;
+            container.scrollTop = newScrollHeight - prevScrollHeight;
+          }
+        });
+      } else {
+        setHasMore(false);
+      }
+    } catch (err) {
+      console.error('Failed to load older messages:', err);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [selectedUser, loadingMore, hasMore, oldestTimestamp, currentUserId]);
+
+  // Scroll handler — detect scroll to top
+  const handleScroll = useCallback(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    // Trigger when scrolled near the top (within 80px)
+    if (container.scrollTop < 80 && hasMore && !loadingMore) {
+      loadOlderMessages();
+    }
+  }, [hasMore, loadingMore, loadOlderMessages]);
 
   // 🚀 Optimistic send — message appears INSTANTLY
   const handleSend = useCallback(async () => {
@@ -166,6 +271,7 @@ export default function ChatWindow({
     setMessages(prev => [...prev, optimisticMsg]);
     setInputText('');
     if (textareaRef.current) textareaRef.current.style.height = 'auto';
+    setTimeout(scrollToBottom, 50);
 
     // 2. BACKGROUND — Encrypt + send
     try {
@@ -301,11 +407,40 @@ export default function ChatWindow({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 md:px-8 py-6 custom-scrollbar relative z-0">
+      <div
+        ref={messagesContainerRef}
+        onScroll={handleScroll}
+        className="flex-1 overflow-y-auto px-4 md:px-8 py-6 custom-scrollbar relative z-0"
+      >
         {loading ? (
-          <div className="flex flex-col items-center justify-center h-full text-neutral-500 gap-4">
-            <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
-            <p className="text-sm font-medium animate-pulse">Syncing encrypted messages...</p>
+          <div className="flex flex-col gap-6 p-2 w-full h-full justify-end opacity-60">
+            {/* Skeleton bubble 1: Received */}
+            <div className="flex justify-start w-full animate-pulse">
+              <div className="bg-neutral-800/40 rounded-[20px] rounded-tl-sm p-4 max-w-[75%] border border-white/5 space-y-2.5">
+                <div className="w-48 h-2.5 bg-neutral-700/50 rounded-full" />
+                <div className="w-32 h-2.5 bg-neutral-700/50 rounded-full" />
+              </div>
+            </div>
+            {/* Skeleton bubble 2: Sent */}
+            <div className="flex justify-end w-full animate-pulse" style={{ animationDelay: '150ms' }}>
+              <div className="bg-indigo-900/20 rounded-[20px] rounded-tr-sm p-4 max-w-[75%] border border-indigo-500/10 space-y-2.5">
+                <div className="w-40 h-2.5 bg-indigo-500/20 rounded-full" />
+              </div>
+            </div>
+            {/* Skeleton bubble 3: Received */}
+            <div className="flex justify-start w-full animate-pulse" style={{ animationDelay: '300ms' }}>
+              <div className="bg-neutral-800/40 rounded-[20px] rounded-tl-sm p-4 max-w-[75%] border border-white/5 space-y-2.5">
+                <div className="w-56 h-2.5 bg-neutral-700/50 rounded-full" />
+                <div className="w-48 h-2.5 bg-neutral-700/50 rounded-full" />
+                <div className="w-24 h-2.5 bg-neutral-700/50 rounded-full" />
+              </div>
+            </div>
+            {/* Syncing Info */}
+            <div className="flex justify-center mt-2 pb-4">
+               <p className="text-[10px] text-neutral-600 font-bold uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
+                 <Lock size={10} className="text-indigo-400/50" /> Syncing Secure Channel...
+               </p>
+            </div>
           </div>
         ) : messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center max-w-sm mx-auto opacity-50">
@@ -314,17 +449,44 @@ export default function ChatWindow({
             <p className="text-sm text-neutral-500 mt-2">Send a message to start an encrypted channel with {selectedUser.display_name}.</p>
           </div>
         ) : (
-          <AnimatePresence initial={false}>
-            {messages.map((msg) => (
-              <MessageBubble
-                key={msg._tempId || msg.id}
-                message={msg}
-                currentUserId={currentUserId}
-                privateKey={privateKey}
-                onRetry={msg._status === 'failed' ? () => handleRetry(msg) : undefined}
-              />
-            ))}
-          </AnimatePresence>
+          <>
+            {/* Load more indicator */}
+            {hasMore && (
+              <div className="flex justify-center py-4">
+                {loadingMore ? (
+                  <div className="flex items-center gap-2 text-neutral-500 text-xs font-semibold">
+                    <div className="w-4 h-4 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                    <span>Loading older messages...</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={loadOlderMessages}
+                    className="px-4 py-1.5 bg-neutral-800/60 hover:bg-neutral-700/60 text-neutral-400 hover:text-white rounded-full text-xs font-semibold transition-colors border border-white/5"
+                  >
+                    ↑ Load older messages
+                  </button>
+                )}
+              </div>
+            )}
+            {!hasMore && messages.length > 0 && (
+              <div className="flex justify-center py-4">
+                <span className="text-[10px] text-neutral-600 font-bold uppercase tracking-widest">
+                  🔐 Start of encrypted conversation
+                </span>
+              </div>
+            )}
+            <AnimatePresence initial={false}>
+              {messages.map((msg) => (
+                <MessageBubble
+                  key={msg._tempId || msg.id}
+                  message={msg}
+                  currentUserId={currentUserId}
+                  privateKey={privateKey}
+                  onRetry={msg._status === 'failed' ? () => handleRetry(msg) : undefined}
+                />
+              ))}
+            </AnimatePresence>
+          </>
         )}
         <div ref={messagesEndRef} className="h-4" />
       </div>
@@ -333,6 +495,47 @@ export default function ChatWindow({
       <div className="shrink-0 p-4 bg-neutral-900/60 backdrop-blur-xl border-t border-white/5 relative z-10">
         <div className="max-w-4xl mx-auto">
           <div className="relative flex items-end gap-2 bg-neutral-950/80 border border-neutral-800 focus-within:border-indigo-500/50 focus-within:ring-1 focus-within:ring-indigo-500/50 rounded-2xl p-1.5 transition-all shadow-inner">
+            {/* Hidden file input for normal images */}
+            <input
+              ref={imageInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file || !selectedUser) return;
+                try {
+                  // 1. Upload image
+                  const { image_id } = await uploadChatImage(file, 'image');
+                  // 2. Encrypt caption with image ID
+                  const recipientEncKey = selectedUser.encryption_public_key || selectedUser.public_key;
+                  const encrypted = await encryptMessage(`[IMG:${image_id}]`, recipientEncKey, publicKey);
+                  // 3. Send as image message
+                  const result = await apiSendMessage({
+                    recipient_id: selectedUser.id,
+                    encrypted_message: encrypted.encryptedMessage,
+                    encrypted_aes_key_recipient: encrypted.encryptedAesKeyRecipient,
+                    encrypted_aes_key_sender: encrypted.encryptedAesKeySender,
+                    iv: encrypted.iv,
+                    message_type: 'image',
+                  });
+                  if (result.data) {
+                    setMessages(prev => [...prev, { ...result.data, _status: 'sent' as const, _optimisticText: `[IMG:${image_id}]` }]);
+                    onNewMessage?.();
+                  }
+                } catch (err) {
+                  console.error('Image send failed:', err);
+                }
+                e.target.value = '';
+              }}
+            />
+            <button
+              onClick={() => imageInputRef.current?.click()}
+              className="shrink-0 self-end w-11 h-11 flex items-center justify-center rounded-xl bg-neutral-800 hover:bg-indigo-600/20 text-neutral-500 hover:text-indigo-400 transition-all"
+              title="Send Image"
+            >
+              <Paperclip size={18} />
+            </button>
             <textarea
               ref={textareaRef}
               className="flex-1 bg-transparent resize-none outline-none py-3 px-4 text-neutral-200 text-[15px] placeholder:text-neutral-600 custom-scrollbar"
@@ -343,6 +546,13 @@ export default function ChatWindow({
               rows={1}
               style={{ minHeight: '52px', maxHeight: '160px' }}
             />
+            <button
+              onClick={() => setShowSteganoModal(true)}
+              className="shrink-0 self-end w-11 h-11 flex items-center justify-center rounded-xl bg-neutral-800 hover:bg-emerald-600/20 text-neutral-500 hover:text-emerald-400 transition-all"
+              title="Send Stegano Image"
+            >
+              <Eye size={18} />
+            </button>
             <button
               className={`shrink-0 self-end w-11 h-11 flex items-center justify-center rounded-xl transition-all ${
                 inputText.trim() 
@@ -361,6 +571,40 @@ export default function ChatWindow({
           </div>
         </div>
       </div>
+
+      {/* Stegano Modal */}
+      {selectedUser && (
+        <SteganoModal
+          isOpen={showSteganoModal}
+          onClose={() => setShowSteganoModal(false)}
+          recipientName={selectedUser.display_name}
+          recipientPublicKey={selectedUser.encryption_public_key || selectedUser.public_key}
+          senderPublicKey={publicKey}
+          onSend={async (stegoBlob: Blob, secretText: string) => {
+            // 1. Upload stego image to server
+            const { image_id } = await uploadStegoImage(stegoBlob);
+
+            // 2. Encrypt the secret text for regular message storage
+            const recipientEncKey = selectedUser.encryption_public_key || selectedUser.public_key;
+            const encrypted = await encryptMessage(`[STEGO:${image_id}] ${secretText}`, recipientEncKey, publicKey);
+
+            // 3. Send as stego message
+            const result = await apiSendMessage({
+              recipient_id: selectedUser.id,
+              encrypted_message: encrypted.encryptedMessage,
+              encrypted_aes_key_recipient: encrypted.encryptedAesKeyRecipient,
+              encrypted_aes_key_sender: encrypted.encryptedAesKeySender,
+              iv: encrypted.iv,
+              message_type: 'stego',
+            });
+
+            if (result.data) {
+              setMessages(prev => [...prev, { ...result.data, _status: 'sent' as const, _optimisticText: `🖼️ Stego image sent` }]);
+              onNewMessage?.();
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
