@@ -34,11 +34,21 @@ from chat.stegano_routes import stego_bp
 from chat.shared_routes import shared_bp
 from chat.socket_events import init_socketio, socketio
 
-init_db(app)                    # Initialize SQLite database + create tables
+try:
+    init_db(app)                    # Initialize database
+    logger.info("Database initialized successfully")
+except Exception as e:
+    logger.error(f"Database initialization FAILED: {str(e)}")
+
 app.register_blueprint(chat_bp)  # Register /api/chat/* routes
 app.register_blueprint(stego_bp) # Register /api/chat/stego/* routes
 app.register_blueprint(shared_bp) # Register /api/shared/* routes
-init_socketio(app)               # Initialize WebSocket support
+
+try:
+    init_socketio(app)               # Initialize WebSocket support
+    logger.info("SocketIO initialized")
+except Exception as e:
+    logger.error(f"SocketIO initialization FAILED: {str(e)}")
 
 # CORS — Allow everything during debug and initial prod deployment
 CORS(app, resources={r"/*": {"origins": "*"}})
