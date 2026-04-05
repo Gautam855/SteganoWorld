@@ -185,7 +185,7 @@ async def send_message(data: SendMessageRequest, auth: tuple = Depends(get_curre
         )
         db.add(new_msg)
         db.commit()
-        return {"message": "Message sent", "id": new_msg.id}
+        return {"data": new_msg.to_dict(), "message": "Message sent"}
     except Exception as e:
         db.rollback()
         logger.error(f"Send message failed: {str(e)}")
