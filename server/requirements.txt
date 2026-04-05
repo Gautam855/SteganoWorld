@@ -35,7 +35,7 @@ mdurl==0.1.2
 mmh3==5.2.1
 multidict==6.7.1
 numpy==2.4.4
-opencv-python==4.13.0.92
+opencv-python-headless==4.13.0.92
 ordered-set==4.1.0
 packaging==26.0
 piexif==1.1.3
