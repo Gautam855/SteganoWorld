@@ -10,11 +10,12 @@
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.0.2",
+    "@supabase/supabase-js": "^2.101.1",
     "@sweetalert2/theme-dark": "^5.0.16",
     "@tabler/icons-react": "^3.4.0",
-    "axios": "^1.7.0",
+    "axios": "^1.14.0",
     "clsx": "^2.1.1",
-    "framer-motion": "^11.2.4",
+    "framer-motion": "^11.18.2",
     "lucide-react": "^1.7.0",
     "next": "^14.2.3",
     "next-themes": "^0.4.6",
@@ -23,8 +24,9 @@
     "react-toastify": "^10.0.5",
     "sass": "^1.77.2",
     "simplex-noise": "^4.0.1",
+    "socket.io-client": "^4.8.3",
     "sweetalert2": "^11.6.13",
-    "tailwind-merge": "^2.3.0"
+    "tailwind-merge": "^2.6.1"
   },
   "devDependencies": {
     "@types/node": "^20",

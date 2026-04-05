@@ -73,6 +73,10 @@ export function NavbarDemo({ className }: { className?: string }) {
               <Link href="/Instructions" className="hidden md:flex items-center gap-2 text-neutral-400 hover:text-white transition-colors">
                 <BookOpen size={16} /> Guide
               </Link>
+
+              <Link href="/chat" className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors text-purple-400">
+                <Shield size={16} /> Chat
+              </Link>
             </div>
           </Menu>
         </div>
