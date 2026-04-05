@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 sqlalchemy
 python-multipart
 python-jose[cryptography]
@@ -14,7 +14,5 @@ passlib[bcrypt]
 python-socketio[asgi]
 bidict
 psycopg2-binary
-jwt
 opencv-python-headless
 numpy
-flask-cors

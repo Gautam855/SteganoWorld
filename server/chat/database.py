@@ -1,4 +1,4 @@
-from sqlalchemy import create_all, create_engine
+from sqlalchemy import create_engine
 from sqlalchemy.orm import scoped_session, sessionmaker, declarative_base
 import os
 from sqlalchemy.pool import NullPool

@@ -1,8 +1,10 @@
 import os
 import logging
-from fastapi import FastAPI, Depends, Request
+from dotenv import load_dotenv
+load_dotenv()
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from chat.database import db_session, init_db
 from chat.routes import router as chat_router
 from chat.stegano_routes import router as stego_router

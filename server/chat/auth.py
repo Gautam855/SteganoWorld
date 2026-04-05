@@ -1,5 +1,5 @@
 import os
-import jwt
+from jose import jwt, JWTError
 import logging
 from datetime import datetime, timedelta, timezone
 from functools import wraps
@@ -39,7 +39,7 @@ def get_current_user(request: Request):
         return payload['user_id'], payload['username']
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
-    except jwt.InvalidTokenError:
+    except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
 def verify_token(token: str):
@@ -47,5 +47,6 @@ def verify_token(token: str):
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
-    except jwt.InvalidTokenError:
+    except JWTError:
         return None
+
