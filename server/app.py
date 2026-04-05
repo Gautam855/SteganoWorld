@@ -23,7 +23,9 @@ logger = logging.getLogger('SteganoWorld')
 
 # ─── App Init ─────────────────────────────────────────────────────
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'stegano-flask-secret-key')
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY')
+if not app.config['SECRET_KEY']:
+    raise RuntimeError("SECRET_KEY environment variable is not set!")
 
 # ─── Chat Module Init ─────────────────────────────────────────────
 from chat.database import init_db
@@ -38,8 +40,10 @@ app.register_blueprint(stego_bp) # Register /api/chat/stego/* routes
 app.register_blueprint(shared_bp) # Register /api/shared/* routes
 init_socketio(app)               # Initialize WebSocket support
 
-# FIX 3: CORS — Only allow specific origins (not the entire internet)
-ALLOWED_ORIGINS = [
+# CORS — Only allow specific origins (not the entire internet)
+# Can be a comma-separated list in ALLOWED_ORIGINS env var
+env_origins = os.environ.get('ALLOWED_ORIGINS', '')
+ALLOWED_ORIGINS = [origin.strip() for origin in env_origins.split(',') if origin.strip()] or [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "https://steganoworld.vercel.app",
