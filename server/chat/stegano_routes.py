@@ -37,7 +37,11 @@ async def upload_stego_image(
         content = await image.read()
         
         # Upload to Supabase Storage. Throws exception on failure.
-        res = supabase.storage.from_(bucket_name).upload(file_name, content)
+        res = supabase.storage.from_(bucket_name).upload(
+            file_name, 
+            content,
+            file_options={"content-type": image.content_type}
+        )
         
         public_url = supabase.storage.from_(bucket_name).get_public_url(file_name)
         
