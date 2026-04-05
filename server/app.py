@@ -40,16 +40,8 @@ app.register_blueprint(stego_bp) # Register /api/chat/stego/* routes
 app.register_blueprint(shared_bp) # Register /api/shared/* routes
 init_socketio(app)               # Initialize WebSocket support
 
-# CORS — Only allow specific origins (not the entire internet)
-# Can be a comma-separated list in ALLOWED_ORIGINS env var
-env_origins = os.environ.get('ALLOWED_ORIGINS', '')
-ALLOWED_ORIGINS = [origin.strip() for origin in env_origins.split(',') if origin.strip()] or [
-    "https://stegano-world.vercel.app",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "https://steganoworld.vercel.app",
-]
-CORS(app, origins=ALLOWED_ORIGINS)
+# CORS — Allow everything during debug and initial prod deployment
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # FIX 2: File upload limit — 20 MB max (prevents DoS via giant uploads)
 app.config['MAX_CONTENT_LENGTH'] = 20 * 1024 * 1024  # 20 MB

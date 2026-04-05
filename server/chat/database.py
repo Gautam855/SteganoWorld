@@ -16,7 +16,8 @@ def init_db(app):
     Creates all tables if they don't exist.
     """
     # Use the full URI string directly if available, else fallback to SQLite
-    db_uri = os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:///stegano_chat.db')
+    # Use /tmp/ for SQLite on Vercel/Serverless to avoid Read-only filesystem error
+    db_uri = os.environ.get('SQLALCHEMY_DATABASE_URI', 'sqlite:////tmp/stegano_chat.db')
     
     app.config.setdefault('SQLALCHEMY_DATABASE_URI', db_uri)
     app.config.setdefault('SQLALCHEMY_TRACK_MODIFICATIONS', False)
