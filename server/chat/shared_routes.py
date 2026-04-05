@@ -15,7 +15,7 @@ router = APIRouter(prefix="/api/chat/shared", tags=["shared"])
 
 class ShareRequest(BaseModel):
     image_id: str
-    authorized_users: list[dict] # { user_id, encrypted_aes_key }
+    access_list: list[dict] # { user_id, encrypted_aes_key }
     burn_after_views: int = 0
 
 @router.post("/create")
@@ -32,7 +32,7 @@ async def create_shared_link(data: ShareRequest, auth: tuple = Depends(get_curre
         db.flush() # Get the new_link.id
 
         # Add access for each user
-        for user_data in data.authorized_users:
+        for user_data in data.access_list:
             access = SharedLinkAccess(
                 link_id=new_link.id,
                 user_id=user_data['user_id'],
