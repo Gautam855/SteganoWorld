@@ -9,6 +9,7 @@ from chat.database import db_session, init_db
 from chat.routes import router as chat_router
 from chat.stegano_routes import router as stego_router
 from chat.shared_routes import router as shared_router
+from chat.ops_routes import router as ops_router
 import socketio
 from chat.socket_events import sio
 
@@ -52,6 +53,7 @@ async def db_session_middleware(request: Request, call_next):
 app.include_router(chat_router)
 app.include_router(stego_router)
 app.include_router(shared_router)
+app.include_router(ops_router)
 
 # --- Socket.IO Integration ---
 # Wrap FastAPI with Socket.IO ASGI app
