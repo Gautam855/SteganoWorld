@@ -1,176 +1,122 @@
-"""
-WebSocket Events — Real-time Messaging
-========================================
-Uses Flask-SocketIO for real-time message delivery.
-Events:
-  - connect/disconnect: User online/offline status
-  - new_message: Real-time message push to recipient
-  - typing: Typing indicators
-  - message_read: Read receipts
-"""
-
 import logging
 from datetime import datetime, timezone
-from flask_socketio import SocketIO, emit, join_room, leave_room
+import socketio
 from chat.auth import verify_token
 from chat.models import ChatUser
-from chat.database import db
+from chat.database import db_session
 
 logger = logging.getLogger('SteganoWorld.Socket')
 
-socketio = SocketIO(cors_allowed_origins="*")
+# Create a Socket.IO server
+# async_mode='asgi' is important for FastAPI integration
+sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins="*")
 
 # Track connected users: { user_id: sid }
 connected_users = {}
 
-
-def init_socketio(app):
-    """Initialize SocketIO with the Flask app."""
-    socketio.init_app(app, async_mode='threading')
-    return socketio
-
-
-# ─── Connection Events ───────────────────────────────────────────
-
-@socketio.on('connect')
-def handle_connect():
+@sio.event
+async def connect(sid, environ, auth=None):
     """
     Client connects with JWT token for authentication.
-    Client sends: { "token": "jwt_token_here" } as auth data.
     """
-    token = request.args.get('token') or ''
+    # Extract token from query params
+    # Depending on how client sends it, may need adjustment
+    query_string = environ.get('QUERY_STRING', '')
+    token = ""
+    for param in query_string.split('&'):
+        if param.startswith('token='):
+            token = param.split('=')[1]
+            break
+            
     if not token:
-        logger.warning("Socket connection rejected: no token")
+        logger.warning(f"Socket connection rejected for {sid}: no token")
         return False  # Reject connection
 
     payload = verify_token(token)
     if not payload:
-        logger.warning("Socket connection rejected: invalid token")
+        logger.warning(f"Socket connection rejected for {sid}: invalid token")
         return False  # Reject connection
 
     user_id = payload['user_id']
     username = payload['username']
 
     # Track this connection
-    connected_users[user_id] = request.sid
+    connected_users[user_id] = sid
 
     # Join personal room (for targeted messages)
-    join_room(user_id)
+    await sio.enter_room(sid, user_id)
 
     # Update online status in DB
+    db = db_session()
     try:
-        user = ChatUser.query.get(user_id)
+        user = db.query(ChatUser).get(user_id)
         if user:
             user.is_online = True
             user.last_seen = datetime.now(timezone.utc)
-            db.session.commit()
-    except Exception:
-        pass
+            db.commit()
+    except Exception as e:
+        logger.error(f"Socket offline status update failed: {str(e)}")
+        db.rollback()
+    finally:
+        db_session.remove()
 
     # Broadcast to all: this user is online
-    emit('user_online', {'user_id': user_id, 'username': username}, broadcast=True)
+    await sio.emit('user_online', {'user_id': user_id, 'username': username})
     logger.info(f"Socket connected: {username} ({user_id[:8]}...)")
 
-
-@socketio.on('disconnect')
-def handle_disconnect():
+@sio.event
+async def disconnect(sid):
     """Handle user disconnection."""
-    # Find which user disconnected
     disconnected_user_id = None
-    for uid, sid in connected_users.items():
-        if sid == request.sid:
+    for uid, conn_sid in list(connected_users.items()):
+        if conn_sid == sid:
             disconnected_user_id = uid
             break
 
     if disconnected_user_id:
-        del connected_users[disconnected_user_id]
-        leave_room(disconnected_user_id)
-
-        # Update offline status
+        if disconnected_user_id in connected_users:
+            del connected_users[disconnected_user_id]
+        
+        db = db_session()
         try:
-            user = ChatUser.query.get(disconnected_user_id)
+            user = db.query(ChatUser).get(disconnected_user_id)
             if user:
                 user.is_online = False
                 user.last_seen = datetime.now(timezone.utc)
-                db.session.commit()
-                emit('user_offline', {
+                db.commit()
+                await sio.emit('user_offline', {
                     'user_id': disconnected_user_id,
                     'username': user.username
-                }, broadcast=True)
+                })
                 logger.info(f"Socket disconnected: {user.username}")
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Socket offline status update failed: {str(e)}")
+            db.rollback()
+        finally:
+            db_session.remove()
 
-
-# ─── Messaging Events ────────────────────────────────────────────
-
-@socketio.on('send_message')
-def handle_send_message(data):
-    """
-    Real-time message delivery.
-    
-    Client emits: {
-        "recipient_id": "uuid",
-        "message": { ...encrypted message object from REST API response... }
-    }
-    
-    Server relays to recipient's room — still encrypted!
-    """
+@sio.event
+async def new_message_client(sid, data):
+    """Client sends a new message successfully."""
+    # Data is the message dict
     recipient_id = data.get('recipient_id')
-    message_data = data.get('message')
+    if recipient_id:
+        await sio.emit('new_message', data, room=recipient_id)
 
-    if not recipient_id or not message_data:
-        return
-
-    # Send to recipient's room (if they're online)
-    if recipient_id in connected_users:
-        emit('new_message', message_data, room=recipient_id)
-        logger.info(f"Real-time message delivered to {recipient_id[:8]}...")
-
-
-@socketio.on('message_delivered')
-def handle_message_delivered(data):
-    """
-    Delivery confirmation — recipient confirms they received the message.
-    Relay back to sender so they can show double tick (✓✓).
-    """
-    message_id = data.get('message_id')
-    sender_id = data.get('sender_id')
-
-    if message_id and sender_id and sender_id in connected_users:
-        emit('message_delivered', {'message_id': message_id}, room=sender_id)
-        logger.info(f"Delivery receipt: {message_id[:8]}... → sender {sender_id[:8]}...")
-
-
-@socketio.on('typing')
-def handle_typing(data):
-    """Forward typing indicator to recipient."""
+@sio.event
+async def typing_client(sid, data):
+    """Client is typing."""
+    # data: { recipient_id, is_typing: bool }
     recipient_id = data.get('recipient_id')
     sender_id = data.get('sender_id')
+    if recipient_id:
+        await sio.emit('typing', {
+            'sender_id': sender_id,
+            'is_typing': data.get('is_typing', False)
+        }, room=recipient_id)
 
-    if recipient_id and recipient_id in connected_users:
-        emit('typing', {'sender_id': sender_id}, room=recipient_id)
-
-
-@socketio.on('stop_typing')
-def handle_stop_typing(data):
-    """Forward stop-typing indicator to recipient."""
-    recipient_id = data.get('recipient_id')
-    sender_id = data.get('sender_id')
-
-    if recipient_id and recipient_id in connected_users:
-        emit('stop_typing', {'sender_id': sender_id}, room=recipient_id)
-
-
-@socketio.on('message_read')
-def handle_message_read(data):
-    """Notify sender that their message was read."""
-    sender_id = data.get('sender_id')
-    reader_id = data.get('reader_id')
-
-    if sender_id and sender_id in connected_users:
-        emit('message_read', {'reader_id': reader_id}, room=sender_id)
-
-
-# Need request context for socket events
-from flask import request
+async def emit_new_message(message_data):
+    """Helper to emit new message to recipient."""
+    recipient_id = message_data.get('recipient_id')
+    if recipient_id:
+        await sio.emit('new_message', message_data, room=recipient_id)

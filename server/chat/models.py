@@ -1,50 +1,33 @@
-"""
-Database Models — ChatUser & Message
-=====================================
-Zero-Knowledge Architecture:
-  - ChatUser: Stores ONLY public key + profile (NO password, NO secrets)
-  - Message:  Stores ONLY encrypted data (server can NEVER read them)
-  
-Auth is via challenge-response: server sends nonce, client signs with
-private key, server verifies with stored public key. No password ever
-touches the server.
-"""
-
 import uuid
 from datetime import datetime, timezone
-from chat.database import db
+from sqlalchemy import Column, String, Text, DateTime, Boolean, ForeignKey, Integer
+from sqlalchemy.orm import relationship
+from chat.database import Base
 
-
-class ChatUser(db.Model):
+class ChatUser(Base):
     """
     User profile for the E2E chat system — ZERO KNOWLEDGE.
-    
-    - public_key: RSA public key (SPKI/PEM format) — safe to store on server
-    - challenge_nonce: Temporary random nonce for challenge-response auth
-    - nonce_expires_at: Expiry time for the challenge nonce
-    
-    ❌ NO password_hash — server never knows any password
-    ❌ NO private_key — stays on user's device ONLY
     """
     __tablename__ = 'chat_users'
 
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    username = db.Column(db.String(50), unique=True, nullable=False, index=True)
-    display_name = db.Column(db.String(100), nullable=False)
-    public_key = db.Column(db.Text, nullable=False)  # Signing public key (RSASSA-PKCS1-v1_5) for auth
-    encryption_public_key = db.Column(db.Text, nullable=True)  # RSA-OAEP public key for message encryption
-    avatar_color = db.Column(db.String(10), default='#10b981')
-    is_online = db.Column(db.Boolean, default=False)
-    last_seen = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    username = Column(String(50), unique=True, nullable=False, index=True)
+    display_name = Column(String(100), nullable=False)
+    public_key = Column(Text, nullable=False)  # Signing public key (RSASSA-PKCS1-v1_5) for auth
+    encryption_public_key = Column(Text, nullable=True)  # RSA-OAEP public key for message encryption
+    avatar_color = Column(String(10), default='#10b981')
+    is_online = Column(Boolean, default=False)
+    last_seen = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     # Challenge-response auth fields (temporary, no secrets)
-    challenge_nonce = db.Column(db.String(128), nullable=True)
-    nonce_expires_at = db.Column(db.DateTime, nullable=True)
+    challenge_nonce = Column(String(128), nullable=True)
+    nonce_expires_at = Column(DateTime, nullable=True)
 
     # Relationships
-    sent_messages = db.relationship('Message', foreign_keys='Message.sender_id', backref='sender', lazy='dynamic')
-    received_messages = db.relationship('Message', foreign_keys='Message.recipient_id', backref='recipient', lazy='dynamic')
+    # Note: in raw SQLAlchemy, relationships are defined differently
+    sent_messages = relationship('Message', primaryjoin="ChatUser.id==Message.sender_id", back_populates='sender')
+    received_messages = relationship('Message', primaryjoin="ChatUser.id==Message.recipient_id", back_populates='recipient')
 
     def to_dict(self, include_public_key=False):
         """Convert to JSON-safe dictionary."""
@@ -63,37 +46,31 @@ class ChatUser(db.Model):
         return data
 
 
-class Message(db.Model):
+class Message(Base):
     """
     Encrypted message storage — ZERO KNOWLEDGE.
-    
-    Server stores ONLY encrypted data:
-    - encrypted_message: AES-GCM encrypted message content (base64)
-    - encrypted_aes_key_recipient: RSA encrypted AES key for RECIPIENT (base64)
-    - encrypted_aes_key_sender: RSA encrypted AES key for SENDER (base64) — so sender can also decrypt their own sent messages
-    - iv: AES-GCM initialization vector (base64)
-    
-    Server can NEVER decrypt these without a user's PRIVATE key
-    which is stored ONLY on the user's device.
     """
     __tablename__ = 'messages'
 
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    sender_id = db.Column(db.String(36), db.ForeignKey('chat_users.id'), nullable=False, index=True)
-    recipient_id = db.Column(db.String(36), db.ForeignKey('chat_users.id'), nullable=False, index=True)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    sender_id = Column(String(36), ForeignKey('chat_users.id'), nullable=False, index=True)
+    recipient_id = Column(String(36), ForeignKey('chat_users.id'), nullable=False, index=True)
 
     # Encrypted payload — server sees only base64 garbage
-    encrypted_message = db.Column(db.Text, nullable=False)
-    encrypted_aes_key_recipient = db.Column(db.Text, nullable=False)  # RSA-encrypted AES key for recipient
-    encrypted_aes_key_sender = db.Column(db.Text, nullable=False)     # RSA-encrypted AES key for sender
-    iv = db.Column(db.String(50), nullable=False)
+    encrypted_message = Column(Text, nullable=False)
+    encrypted_aes_key_recipient = Column(Text, nullable=False)  # RSA-encrypted AES key for recipient
+    encrypted_aes_key_sender = Column(Text, nullable=False)     # RSA-encrypted AES key for sender
+    iv = Column(String(50), nullable=False)
 
-    message_type = db.Column(db.String(10), default='text')  # 'text' | 'image' | 'stego'
-    is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+    message_type = Column(String(10), default='text')  # 'text' | 'image' | 'stego'
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
+
+    sender = relationship('ChatUser', primaryjoin="ChatUser.id==Message.sender_id", back_populates='sent_messages')
+    recipient = relationship('ChatUser', primaryjoin="ChatUser.id==Message.recipient_id", back_populates='received_messages')
 
     def to_dict(self):
-        """Convert to JSON-safe dictionary (still encrypted!)."""
+        """Convert to JSON-safe dictionary."""
         return {
             'id': self.id,
             'sender_id': self.sender_id,
@@ -108,37 +85,37 @@ class Message(db.Model):
         }
 
 
-class SharedLink(db.Model):
+class SharedLink(Base):
     """
     Secure Shared Link for Stego Images.
     Owner can grant access to specific users.
     """
     __tablename__ = 'shared_links'
 
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    owner_id = db.Column(db.String(36), db.ForeignKey('chat_users.id'), nullable=False, index=True)
-    image_id = db.Column(db.String(100), nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    owner_id = Column(String(36), ForeignKey('chat_users.id'), nullable=False, index=True)
+    image_id = Column(String(100), nullable=False)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Burn-after-reading / Ephemerality parameters
-    burn_after_views = db.Column(db.Integer, default=0) # 0 means disabled
-    views_count = db.Column(db.Integer, default=0)
+    burn_after_views = Column(Integer, default=0) # 0 means disabled
+    views_count = Column(Integer, default=0)
     
     # Relationships
-    access_list = db.relationship('SharedLinkAccess', backref='link', cascade='all, delete-orphan', lazy='dynamic')
+    access_list = relationship('SharedLinkAccess', back_populates='link', cascade='all, delete-orphan')
 
 
-class SharedLinkAccess(db.Model):
+class SharedLinkAccess(Base):
     """
     Zero-Knowledge Access Record for a Shared Link.
-    Stores the AES key encrypted uniquely with the authorized user's public key.
     """
     __tablename__ = 'shared_link_access'
 
-    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    link_id = db.Column(db.String(36), db.ForeignKey('shared_links.id'), nullable=False, index=True)
-    user_id = db.Column(db.String(36), db.ForeignKey('chat_users.id'), nullable=False, index=True)
+    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    link_id = Column(String(36), ForeignKey('shared_links.id'), nullable=False, index=True)
+    user_id = Column(String(36), ForeignKey('chat_users.id'), nullable=False, index=True)
     
     # The AES key used to encrypt the image data, encrypted with THIS user's RSA public key
-    encrypted_aes_key = db.Column(db.Text, nullable=False)
+    encrypted_aes_key = Column(Text, nullable=False)
 
+    link = relationship('SharedLink', back_populates='access_list')
