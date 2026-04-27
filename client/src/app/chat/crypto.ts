@@ -147,7 +147,7 @@ export async function encryptMessage(
     encryptedMessage: arrayBufferToBase64(encryptedBuffer),
     encryptedAesKeyRecipient: arrayBufferToBase64(encryptedAesKeyRecipient),
     encryptedAesKeySender: arrayBufferToBase64(encryptedAesKeySender),
-    iv: arrayBufferToBase64(iv),
+    iv: arrayBufferToBase64(iv.buffer),
   };
 }
 

@@ -1,0 +1,93 @@
+# 🔐 SteganoWorld: Extreme Technical Specification (Internal Architecture)
+
+This document provides a low-level technical deep-dive into the SteganoWorld protocols. It covers key generation, the "Double-Wrap" encryption pattern, the binary steganography structure, and the complete lifecycle of a message.
+
+---
+
+## 🏗️ 1. Infrastructure & Core Design
+SteganoWorld operates on a **Zero-Knowledge, E2EE (End-to-End Encrypted)** architecture.
+*   **Security Foundation**: Web Crypto API (Browser) & PyCryptodome (Server).
+*   **Persistence**: PostgreSQL (Supabase) for metadata; Supabase Buckets for binary assets.
+*   **Real-time Communication**: WebSockets via Flask-SocketIO.
+
+---
+
+## 🔑 2. Identity & Cryptographic Keys
+Every user possesses two separate RSA-4096 key pairs. **Private keys never leave the client device.**
+
+### A. Signing Key Pair (`RSASSA-PKCS1-v1_5`, SHA-256)
+*   **Role**: Prove device ownership during authentication.
+*   **Flow**: Server sends a 128-char random nonce (`challenge_nonce`) -> Client signs it with this private key -> Server verifies it using the public key stored in `chat_users.public_key`.
+
+### B. Encryption Key Pair (`RSA-OAEP`, SHA-256)
+*   **Role**: Securely wrap/unwrap symmetric message keys (AES).
+*   **Import Optimization**: Keys are imported once into a `Map` cache to avoid the costly ~100ms PEM parse on every message.
+
+---
+
+## 📨 3. Lifecycle of a Message: The "Double-Wrap" Flow
+This flow ensures history is accessible to both the Sender and Recipient without the server ever knowing the contents.
+
+### Step 1: Client-Side Preparation (Sender)
+1.  **AES Gen**: Frontend generates a unique **AES-256-GCM** session key (`K`) and a 12-byte **Initial Vector** (`IV`).
+2.  **Symmetric Encryption**: Message plaintext is encrypted with `K` + `IV` to produce ciphertext `C`.
+3.  **Key Wrapping (Recipient)**: `K` is encrypted using the Recipient’s **RSA Encryption Public Key**.
+    *   Result: `WEK_R` (Wrapped Encryption Key - Recipient).
+4.  **Key Wrapping (Sender)**: `K` is encrypted using the Sender’s own **RSA Encryption Public Key**.
+    *   Result: `WEK_S` (Wrapped Encryption Key - Sender).
+5.  **Dispatch**: Payload `{C, WEK_R, WEK_S, IV}` is sent to the `/api/chat/send` endpoint.
+
+### Step 2: Server-Side Relay (Zero-Knowledge)
+1.  Server receives the payload.
+2.  It cannot read `C` because it lacks the private key to unwrap `WEK_R` or `WEK_S`.
+3.  Server commits the payload to the `messages` table.
+4.  Server emits the message to the Recipient via WebSockets.
+
+### Step 3: Client-Side Decryption (Recipient/Sender)
+1.  The client receives the blob.
+2.  If viewing own history: Client unwraps `WEK_S` using its Local Private Key to get `K`.
+3.  If receiving: Client unwraps `WEK_R` using its Local Private Key to get `K`.
+4.  Client decrypts `C` using `K` + `IV` to reveal the plaintext.
+
+---
+
+## 🖼️ 4. Steganography: Binary Payload Structure
+When hiding data in imagery, SteganoWorld doesn't just inject raw text. It injects a structured binary bundle using the **LSB (Least Significant Bit)** of the Red, Green, and Blue channels.
+
+### Binary Header & Payload Mapping (LSB)
+The hidden data is packed into the following bitstream structure:
+| Offset | Size | Name | Description |
+| :--- | :--- | :--- | :--- |
+| `0x00` | 4 Bytes | **Total Length** | Signed 32-bit integer of the entire following payload. |
+| `0x04` | 2 Bytes | **Recip Key Len** | Length (N) of the RSA-wrapped AES key for the recipient. |
+| `0x06` | N Bytes | **WEK_R** | The actual RSA-OAEP encrypted AES key blob. |
+| `0x06+N` | 2 Bytes | **Sender Key Len** | Length (M) of the RSA-wrapped AES key for the sender. |
+| `0x08+N` | M Bytes | **WEK_S** | The actual RSA-OAEP encrypted AES key blob. |
+| `0x08+N+M` | 12 Bytes | **IV** | The 12-byte Initialization Vector for AES-GCM. |
+| `0x14+N+M` | Remainder | **Ciphertext** | The AES-256-GCM encrypted message/file content. |
+
+**Capacity Calculation**: `(Width * Height * 3) / 8` bytes. For a 1080p image, capacity is ~777 KB.
+
+---
+
+## 🔐 5. The Vigenere Engine (Python / Manual Mode)
+For the manual file/text "Encode & Decode" tools, a multi-stage **Vigenere v3.0 Pipeline** is used:
+
+1.  **HMAC Verification**: A 16B HMAC-SHA256 tag of the data is generated using the user's password. This verifies the password is correct without storing any hints.
+2.  **Zlib Compression**: Level 9 compression increases data density and entropy (making the payload look like random noise/snow to statistical detectors).
+3.  **Random Padding**: 32-128 bytes are added to prevent "length attacks" where someone guesses a message based on its encrypted size.
+4.  **Key Derivation (PBKDF2)**: Password + 16B Salt are hashed **600,000 times**.
+5.  **Double Encryption Layer**: 
+    *   **Layer 1**: AES-256 GCM.
+    *   **Layer 2**: ChaCha20-Poly1305.
+    *   Payload = `[Salt][ChaCha Nonce][ChaCha Tag][ChaCha CT (containing AES bundle)]`.
+
+---
+
+## 🗄️ 6. API & Database Details
+*   **`chat_users`**: Stores RSA PEM public keys. All private keys are stored in `localStorage`.
+*   **`messages`**: Stores base64 strings of the encrypted content.
+*   **`shared_links`**: Bridges the gap for ad-hoc sharing, storing temporary permissions and recipient-wrapped keys.
+
+---
+*Created on 2026-04-10 | Engineering Internal Doc*
